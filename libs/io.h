@@ -147,6 +147,14 @@ public: // functions
       glfwSwapBuffers(handle());
     }
   }
+  void enableVsync(bool use) {
+    if (use)
+      glfwSwapInterval(1); // frames between
+    else
+      glfwSwapInterval(0); // 0 frames between
+  }
+
+
 
   void shouldClose() { glfwSetWindowShouldClose(handle(), GLFW_TRUE); }
 
@@ -269,14 +277,6 @@ public: // funcitons
     glfwMakeContextCurrent(window.handle());
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
   }
-
-  void enableVsync(bool use) {
-    if (use)
-      glfwSwapInterval(1); // frames between
-    else
-      glfwSwapInterval(0); // 0 frames between
-  }
-
 
 private: // functions
   bool initalize() {
