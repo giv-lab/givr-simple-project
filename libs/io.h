@@ -105,8 +105,34 @@ public: // types
   Window(PropertiesArgs &&... properties)
       : m_properties(std::forward<PropertiesArgs...>(properties...)),
         m_handle(nullptr, destroy) {
-    init();
+    init(true);
   }
+
+  ~Window() = default;
+  Window(Window const &o) = delete;
+  Window& operator=(Window const &o) = delete;
+
+  Window(Window &&o) noexcept
+      : m_properties(std::move(o.m_properties))
+      , m_handle(std::move(o.m_handle))
+      , m_frameBufferSize(std::move(o.m_frameBufferSize))
+      , m_keyboardCommands(std::move(o.m_keyboardCommands))
+      , m_mouseCommands(std::move(o.m_mouseCommands))
+      , m_cursorCommand(std::move(o.m_cursorCommand))
+  {
+      init(false);
+  }
+  Window& operator=(Window&& o) {
+      m_properties = std::move(o.m_properties);
+      m_handle = std::move(o.m_handle);
+      m_frameBufferSize = std::move(o.m_frameBufferSize);
+      m_keyboardCommands = std::move(o.m_keyboardCommands);
+      m_mouseCommands = std::move(o.m_mouseCommands);
+      m_cursorCommand = std::move(o.m_cursorCommand);
+      init(false);
+      return *this;
+  }
+
 
 public: // functions
   void run(std::function<void(float)> const &render) {
@@ -200,8 +226,8 @@ private: // functions
 
   static void destroy(GLFWwindow *window) { glfwDestroyWindow(window); }
 
-  void init() {
-    m_handle.reset(create(m_properties));
+  void init(bool createWindow) {
+    if (createWindow) m_handle.reset(create(m_properties));
     glfwSetWindowUserPointer(handle(), this);
     setCallbacks();
   }
