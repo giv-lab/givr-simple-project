@@ -270,6 +270,14 @@ public: // funcitons
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
   }
 
+  void enableVsync(bool use) {
+    if (use)
+      glfwSwapInterval(1); // frames between
+    else
+      glfwSwapInterval(0); // 0 frames between
+  }
+
+
 private: // functions
   bool initalize() {
     m_isGLFWInitialized = glfwInit();
@@ -293,14 +301,6 @@ private: // functions
     glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
     glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
     glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-  }
-
-  // TODO: should be on the Window class
-  void enableVsync(bool use) {
-    if (use)
-      glfwSwapInterval(1); // frames between
-    else
-      glfwSwapInterval(0); // 0 frames between
   }
 
   void shutdown() { glfwTerminate(); }
