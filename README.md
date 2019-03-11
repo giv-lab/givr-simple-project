@@ -1,3 +1,8 @@
+Documentation
+-------------
+
+https://lakin.ca/givr/
+
 Compilation
 -----------
 
@@ -12,6 +17,4 @@ Compilation
 
 ## How to Run
 
-    build/pbd
-    build/sph
-
+    build/simple
