@@ -17,6 +17,7 @@ int main(void)
 {
     io::GLFWContext windows;
     auto window = windows.create(io::Window::dimensions{640, 480}, "Simple example");
+    window.enableVsync(true);
 
     auto view = View(TurnTable(), Perspective());
     TurnTableControls controls(window, view.camera);
