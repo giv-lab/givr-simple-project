@@ -78,25 +78,6 @@ namespace utility {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start cube.h
-//------------------------------------------------------------------------------
-#include <cstdint>
-#include <vector>
-
-namespace givr {
-    struct cube {
-    };
-
-    std::vector<float> generate_vertices(cube const &s);
-    std::vector<std::uint32_t> generate_indices(cube const &s);
-
-    // TODO: implement the uv and normal functions.
-}; // end namespace givr
-//------------------------------------------------------------------------------
-// END cube.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 // Start gl.h
 //------------------------------------------------------------------------------
 // TODO: figure out how to do all of this better.
@@ -230,6 +211,25 @@ namespace givr {
 
 //------------------------------------------------------------------------------
 // END gl.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start cube.h
+//------------------------------------------------------------------------------
+#include <cstdint>
+#include <vector>
+
+namespace givr {
+    struct cube {
+    };
+
+    std::vector<float> generate_vertices(cube const &s);
+    std::vector<std::uint32_t> generate_indices(cube const &s);
+
+    // TODO: implement the uv and normal functions.
+}; // end namespace givr
+//------------------------------------------------------------------------------
+// END cube.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -10025,6 +10025,44 @@ namespace givr {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+// Start shader.h
+//------------------------------------------------------------------------------
+
+
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+
+namespace givr {
+
+class Shader
+{
+    public:
+        Shader(const std::string &source, GLenum shaderType);
+        // TODO(lw): make a version that just receives the source directly.
+        ~Shader();
+
+        // Default ctor/dtor & move operations
+        Shader(Shader &&other) = default;
+        Shader &operator=(Shader &&rhs) = default;
+
+        // But no copy or assignment. Bad.
+        Shader(const Shader & ) = delete;
+        Shader &operator=(const Shader &) = delete;
+
+        operator GLuint() const { return m_shaderID; }
+
+    private:
+        GLuint m_shaderID = 0;
+
+};
+};// end namespace givr
+//------------------------------------------------------------------------------
+// END shader.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 // Start texture.h
 //------------------------------------------------------------------------------
 
@@ -10105,44 +10143,6 @@ namespace givr {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start shader.h
-//------------------------------------------------------------------------------
-
-
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-
-namespace givr {
-
-class Shader
-{
-    public:
-        Shader(const std::string &source, GLenum shaderType);
-        // TODO(lw): make a version that just receives the source directly.
-        ~Shader();
-
-        // Default ctor/dtor & move operations
-        Shader(Shader &&other) = default;
-        Shader &operator=(Shader &&rhs) = default;
-
-        // But no copy or assignment. Bad.
-        Shader(const Shader & ) = delete;
-        Shader &operator=(const Shader &) = delete;
-
-        operator GLuint() const { return m_shaderID; }
-
-    private:
-        GLuint m_shaderID = 0;
-
-};
-};// end namespace givr
-//------------------------------------------------------------------------------
-// END shader.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 // Start vertex_array.h
 //------------------------------------------------------------------------------
 
@@ -10167,6 +10167,45 @@ namespace givr {
 };// end namespace givr
 //------------------------------------------------------------------------------
 // END vertex_array.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start buffer_data.h
+//------------------------------------------------------------------------------
+
+#include <vector>
+
+
+namespace givr {
+    struct BufferData {
+        // Holds the necessary vertex buffer data
+        // if the size is zero, then it is not used and will not be supplied to the shader
+        std::uint16_t dimensions = 3;
+
+        BufferUsageType indicesType;
+        std::vector<GLuint> indices;
+        BufferUsageType verticesType;
+        std::vector<float> vertices;
+        BufferUsageType normalsType;
+        std::vector<float> normals;
+        BufferUsageType uvsType;
+        std::vector<float> uvs;
+        BufferUsageType coloursType;
+        std::vector<float> colours;
+
+        void addIndices(std::vector<GLuint> const &newIndices);
+        void addVertices(std::vector<float> const &newVertices);
+        void addVertices(std::vector<vec3f> const &newVertices);
+        void addNormals(std::vector<float> const &newNormals);
+        void addNormals(std::vector<vec3f> const &newNormals);
+        void addUvs(std::vector<float> const &newUvs);
+        //TODO: void addUvs(std::vector<vec2f> const &newUvs);
+        void addColours(std::vector<float> const &newColours);
+        void addColours(std::vector<vec3f> const &newColours);
+    }; // end struct BufferData
+};// end namespace givr
+//------------------------------------------------------------------------------
+// END buffer_data.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -10229,45 +10268,6 @@ namespace givr {
 }
 //------------------------------------------------------------------------------
 // END draw.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start buffer_data.h
-//------------------------------------------------------------------------------
-
-#include <vector>
-
-
-namespace givr {
-    struct BufferData {
-        // Holds the necessary vertex buffer data
-        // if the size is zero, then it is not used and will not be supplied to the shader
-        std::uint16_t dimensions = 3;
-
-        BufferUsageType indicesType;
-        std::vector<GLuint> indices;
-        BufferUsageType verticesType;
-        std::vector<float> vertices;
-        BufferUsageType normalsType;
-        std::vector<float> normals;
-        BufferUsageType uvsType;
-        std::vector<float> uvs;
-        BufferUsageType coloursType;
-        std::vector<float> colours;
-
-        void addIndices(std::vector<GLuint> const &newIndices);
-        void addVertices(std::vector<float> const &newVertices);
-        void addVertices(std::vector<vec3f> const &newVertices);
-        void addNormals(std::vector<float> const &newNormals);
-        void addNormals(std::vector<vec3f> const &newNormals);
-        void addUvs(std::vector<float> const &newUvs);
-        //TODO: void addUvs(std::vector<vec2f> const &newUvs);
-        void addColours(std::vector<float> const &newColours);
-        void addColours(std::vector<vec3f> const &newColours);
-    }; // end struct BufferData
-};// end namespace givr
-//------------------------------------------------------------------------------
-// END buffer_data.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -10375,19 +10375,92 @@ constexpr bool isPointBased() {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start style.h
+// Start parameters.h
+//------------------------------------------------------------------------------
+#include <string>
+
+//------------------------------------------------------------------------------
+// Defines all of the parameters to camera functions.
+//
+// Uses custom types for each name so that we can pass them in as "named"
+// parameters.
 //------------------------------------------------------------------------------
 
 namespace givr {
-namespace style {
-    template <typename... Types>
-    struct Style
-        : public utility::TypedStruct<Types...> {
-    };
-} // end namespace style
+namespace camera {
+
+    using FieldOfViewY = utility::Type<float, struct FieldOfViewY_Tag>;
+    using AspectRatio = utility::Type<float, struct AspectRatio_Tag>;
+    using NearDistance = utility::Type<float, struct NearDistance_Tag>;
+    using FarDistance = utility::Type<float, struct FarDistance_Tag>;
+    using Latitude = utility::Type<float, struct Latitude_Tag>;
+    using Longitude = utility::Type<float, struct Longitude_Tag>;
+    using Zoom = utility::Type<float, struct Zoom_Tag>;
+    using Translation = utility::Type<vec3f, struct Translation_Tag>;
+    using Left = utility::Type<float, struct Left_Tag>;
+    using Right = utility::Type<float, struct Right_Tag>;
+    using Bottom = utility::Type<float, struct Bottom_Tag>;
+    using Top = utility::Type<float, struct Top_Tag>;
+
+} // end namespace geometry
 } // end namespace givr
 //------------------------------------------------------------------------------
-// END style.h
+// END parameters.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start projection.h
+//------------------------------------------------------------------------------
+
+namespace givr {
+namespace camera {
+    template <typename... Types>
+    struct Projection
+        : public utility::TypedStruct<Types...> {
+    };
+} // end namespace geometry
+} // end namespace givr
+//------------------------------------------------------------------------------
+// END projection.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start camera.h
+//------------------------------------------------------------------------------
+
+namespace givr {
+namespace camera {
+    template <typename... Types>
+    struct Camera
+        : public utility::TypedStruct<Types...> {
+    };
+} // end namespace geometry
+} // end namespace givr
+//------------------------------------------------------------------------------
+// END camera.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start view_context.h
+//------------------------------------------------------------------------------
+
+
+namespace givr {
+namespace camera {
+    template <typename CameraT, typename ProjectionT>
+    struct ViewContext {
+        CameraT camera;
+        ProjectionT projection;
+    };
+
+    template <typename CameraT, typename ProjectionT>
+    ViewContext<CameraT, ProjectionT> View(CameraT const &camera, ProjectionT const &projection) {
+        return ViewContext<CameraT, ProjectionT>{camera, projection};
+    }
+}// end namespace camera
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END view_context.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -10421,6 +10494,22 @@ namespace style {
 } // end namespace givr
 //------------------------------------------------------------------------------
 // END parameters.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start style.h
+//------------------------------------------------------------------------------
+
+namespace givr {
+namespace style {
+    template <typename... Types>
+    struct Style
+        : public utility::TypedStruct<Types...> {
+    };
+} // end namespace style
+} // end namespace givr
+//------------------------------------------------------------------------------
+// END style.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -10525,95 +10614,6 @@ namespace givr {
 };// end namespace givr
 //------------------------------------------------------------------------------
 // END program.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start projection.h
-//------------------------------------------------------------------------------
-
-namespace givr {
-namespace camera {
-    template <typename... Types>
-    struct Projection
-        : public utility::TypedStruct<Types...> {
-    };
-} // end namespace geometry
-} // end namespace givr
-//------------------------------------------------------------------------------
-// END projection.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start view_context.h
-//------------------------------------------------------------------------------
-
-
-namespace givr {
-namespace camera {
-    template <typename CameraT, typename ProjectionT>
-    struct ViewContext {
-        CameraT camera;
-        ProjectionT projection;
-    };
-
-    template <typename CameraT, typename ProjectionT>
-    ViewContext<CameraT, ProjectionT> View(CameraT const &camera, ProjectionT const &projection) {
-        return ViewContext<CameraT, ProjectionT>{camera, projection};
-    }
-}// end namespace camera
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END view_context.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start parameters.h
-//------------------------------------------------------------------------------
-#include <string>
-
-//------------------------------------------------------------------------------
-// Defines all of the parameters to camera functions.
-//
-// Uses custom types for each name so that we can pass them in as "named"
-// parameters.
-//------------------------------------------------------------------------------
-
-namespace givr {
-namespace camera {
-
-    using FieldOfViewY = utility::Type<float, struct FieldOfViewY_Tag>;
-    using AspectRatio = utility::Type<float, struct AspectRatio_Tag>;
-    using NearDistance = utility::Type<float, struct NearDistance_Tag>;
-    using FarDistance = utility::Type<float, struct FarDistance_Tag>;
-    using Latitude = utility::Type<float, struct Latitude_Tag>;
-    using Longitude = utility::Type<float, struct Longitude_Tag>;
-    using Zoom = utility::Type<float, struct Zoom_Tag>;
-    using Translation = utility::Type<vec3f, struct Translation_Tag>;
-    using Left = utility::Type<float, struct Left_Tag>;
-    using Right = utility::Type<float, struct Right_Tag>;
-    using Bottom = utility::Type<float, struct Bottom_Tag>;
-    using Top = utility::Type<float, struct Top_Tag>;
-
-} // end namespace geometry
-} // end namespace givr
-//------------------------------------------------------------------------------
-// END parameters.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start camera.h
-//------------------------------------------------------------------------------
-
-namespace givr {
-namespace camera {
-    template <typename... Types>
-    struct Camera
-        : public utility::TypedStruct<Types...> {
-    };
-} // end namespace geometry
-} // end namespace givr
-//------------------------------------------------------------------------------
-// END camera.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -10781,510 +10781,6 @@ namespace givr {
 };// end namespace givr
 //------------------------------------------------------------------------------
 // END instanced_renderer.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start sphere.h
-//------------------------------------------------------------------------------
-#include <cstddef>
-#include <cstdint>
-#include <vector>
-
-namespace givr {
-namespace geometry {
-
-    struct SphereGeometry
-        : public Geometry<Centroid, Radius, AzimuthPoints, AltitudePoints>
-    {
-
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
-            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
-            BufferUsageType uvsType = BufferUsageType::STATIC_DRAW;
-
-            std::vector<float> vertices;
-            std::vector<float> normals;
-            std::vector<std::uint32_t> indices;
-            std::vector<float> uvs;
-        };
-
-    };
-
-    template <typename... Args>
-    SphereGeometry Sphere(Args &&... args) {
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<std::tuple<Args...>, SphereGeometry::Args>,
-            "You have provided incorrect parameters for Sphere. "
-            "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
-        static_assert(sizeof...(args) <= std::tuple_size<SphereGeometry::Args>::value,
-            "You have provided incorrect parameters for Sphere. "
-            "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
-        SphereGeometry s;// = Sphere();
-        s.set(Centroid(0.0, 0.0, 0.0));
-        s.set(Radius(1.0));
-        s.set(AzimuthPoints(20.));
-        s.set(AltitudePoints(20.));
-        if constexpr (sizeof...(args) > 0) {
-            s.set(std::forward<Args>(args)...);
-        }
-        return s;
-    }
-
-    SphereGeometry::Data generateGeometry(SphereGeometry const &s);
-
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END sphere.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start custom.h
-//------------------------------------------------------------------------------
-#include <cstddef>
-#include <cstdint>
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    template <PrimitiveType PrimitiveT>
-    struct CustomGeometry {
-        std::vector<vec3f> vertices;
-        std::vector<vec3f> normals;
-        std::vector<std::uint32_t> indices;
-        std::vector<vec3f> colours;
-        std::vector<vec2f> uvs;
-
-        // TODO: add simpler ways to construct this.
-
-        struct Data : public VertextArrayData<PrimitiveT> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType;
-            BufferUsageType normalsType;
-            BufferUsageType indicesType;
-            BufferUsageType coloursType;
-
-            std::vector<float> vertices;
-            std::vector<float> normals;
-            std::vector<std::uint32_t> indices;
-            std::vector<float> colours;
-            std::vector<float> uvs;
-        };
-
-    };
-
-    template<typename VectorT, int vecsize>
-    void __customGeometryCopy(std::vector<VectorT> const &source, std::vector<float> &target) {
-        for (std::size_t i = 0; i < source.size(); ++i) {
-            for (std::size_t j = 0; j < vecsize; ++j) {
-                target.push_back(source[i][j]);
-            }
-        }
-    };
-
-    template <PrimitiveType PrimitiveT>
-    typename CustomGeometry<PrimitiveT>::Data generateGeometry(CustomGeometry<PrimitiveT> const &l) {
-        typename CustomGeometry<PrimitiveT>::Data data;
-
-        __customGeometryCopy<vec3f, 3>(l.vertices, data.vertices);
-        __customGeometryCopy<vec3f, 3>(l.normals, data.normals);
-        __customGeometryCopy<vec3f, 3>(l.colours, data.colours);
-        __customGeometryCopy<vec2f, 2>(l.uvs, data.uvs);
-
-        data.indices.insert(data.indices.end(), l.indices.begin(), l.indices.end());
-
-        return data;
-    }
-
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END custom.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start polyline.h
-//------------------------------------------------------------------------------
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    template <PrimitiveType LineType>
-    struct PolyLineGeometry {
-        static_assert(
-            LineType != PrimitiveType::LINE_LOOP ||
-            LineType != PrimitiveType::LINE_STRIP,
-            "PolyLine only supports LINE_LOOP or LINE_STRIP"
-        );
-        private:
-            std::vector<Point> m_points;
-        public:
-            std::vector<Point> &points() { return m_points; }
-            std::vector<Point> const &points() const { return m_points; }
-            std::vector<Point> &operator*() { return m_points; }
-            // TODO: expose more of the vector interface here, or
-            //       the conversion operator or something
-            void push_back(Point const &p) { m_points.push_back(p); }
-            void clear() { m_points.clear(); }
-
-        struct Data : public VertextArrayData<LineType> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType;
-            std::vector<float> vertices;
-        };
-    };
-
-    template <PrimitiveType LineType, typename... Args>
-    PolyLineGeometry<LineType> PolyLine(Args &&... args) {
-        PolyLineGeometry<LineType> geometry;
-        geometry.points() = {args...};
-        return geometry;
-    }
-
-    template <PrimitiveType LineType>
-    typename PolyLineGeometry<LineType>::Data generateGeometry(PolyLineGeometry<LineType> const &l) {
-        typename PolyLineGeometry<LineType>::Data data;
-        auto const &points = l.points();
-        data.vertices.reserve(points.size()*3);
-        for (std::size_t i = 0; i < points.size(); ++i) {
-            data.vertices.push_back(points[i].value()[0]);
-            data.vertices.push_back(points[i].value()[1]);
-            data.vertices.push_back(points[i].value()[2]);
-        }
-        return data;
-    }
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END polyline.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start mesh.h
-//------------------------------------------------------------------------------
-
-#include <cstddef>
-#include <cstdint>
-#include <vector>
-
-namespace givr {
-namespace geometry {
-    struct MeshGeometry
-        : public Geometry<Filename>
-          // TODO: Add other parameters like smooth shading etc.
-    {
-
-        std::string const &filename() const { return value<Filename>().value(); }
-        std::string &filename() { return value<Filename>().value(); }
-
-        struct Data : VertextArrayData<PrimitiveType::TRIANGLES> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
-            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
-            BufferUsageType uvsType = BufferUsageType::STATIC_DRAW;
-
-            std::vector<float> vertices;
-            std::vector<float> normals;
-            std::vector<std::uint32_t> indices;
-            std::vector<float> uvs;
-        };
-    };
-
-    template <typename... Args>
-    MeshGeometry Mesh(Args &&... args) {
-        using required_args = std::tuple<Filename>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Filename is a required parameter for Mesh. "
-            "Please provide them.");
-        static_assert(is_subset_of<std::tuple<Args...>, MeshGeometry::Args>,
-            "You have provided incorrect parameters for Mesh. "
-            "Filename is required.");
-        static_assert(sizeof...(args) <= std::tuple_size<MeshGeometry::Args>::value,
-            "You have provided incorrect parameters for Mesh. "
-            "Filename is required.");
-        MeshGeometry m;
-        m.set(std::forward<Args>(args)...);
-        return m;
-    }
-
-    MeshGeometry::Data generateGeometry(const MeshGeometry& m);
-
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END mesh.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start cylinder.h
-//------------------------------------------------------------------------------
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    struct CylinderGeometry
-        : public Geometry<Point1, Point2, Radius, AzimuthPoints>
-    {
-        vec3f const &p1() const { return value<Point1>().value(); }
-        vec3f const &p2() const { return value<Point2>().value(); }
-
-        vec3f &p1() { return value<Point1>().value(); }
-        vec3f &p2() { return value<Point2>().value(); }
-
-        float radius() const { return value<Radius>().value(); }
-        std::size_t azimuthPoints() const { return value<AzimuthPoints>().value(); }
-
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> vertices;
-
-            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> normals;
-
-            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
-            std::vector<std::uint32_t> indices;
-        };
-    };
-
-    template <typename... Args>
-    CylinderGeometry Cylinder(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Point1 and Point2 are a required parameter for Cylinder. "
-            "Please provide them.");
-        static_assert(is_subset_of<std::tuple<Args...>, CylinderGeometry::Args>,
-            "You have provided incorrect parameters for Cylinder. "
-            "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
-        static_assert(sizeof...(args) <= std::tuple_size<CylinderGeometry::Args>::value,
-            "You have provided incorrect parameters for Cylinder. "
-            "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
-        CylinderGeometry c;
-        c.set(Point1(0.f, 0.5f, 0.f));
-        c.set(Point2(0.f, -0.5f, 0.f));
-        c.set(Radius(1.0f));
-        c.set(AzimuthPoints(20));
-        if constexpr (sizeof...(args) > 0) {
-            c.set(std::forward<Args>(args)...);
-        }
-        return c;
-    }
-
-    CylinderGeometry::Data generateGeometry(CylinderGeometry const &l);
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END cylinder.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start line.h
-//------------------------------------------------------------------------------
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    struct LineGeometry
-        : public Geometry<Point1, Point2>
-    {
-        vec3f const &p1() const { return value<Point1>().value(); }
-        vec3f const &p2() const { return value<Point2>().value(); }
-
-        vec3f &p1() { return value<Point1>().value(); }
-        vec3f &p2() { return value<Point2>().value(); }
-
-        struct Data : public VertextArrayData<PrimitiveType::LINES> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> vertices;
-        };
-    };
-
-    template <typename... Args>
-    LineGeometry Line(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Point1 and Point2 are  a required parameter for Line. "
-            "Please provide them.");
-        static_assert(is_subset_of<std::tuple<Args...>, LineGeometry::Args>,
-            "You have provided incorrect parameters for Line. "
-            "Point1 and Point2 are required.");
-        static_assert(sizeof...(args) <= std::tuple_size<LineGeometry::Args>::value,
-            "You have provided incorrect parameters for Line. "
-            "Point1 and Point2 are required.");
-        LineGeometry l;
-        l.set(std::forward<Args>(args)...);
-        return l;
-    }
-
-    LineGeometry::Data generateGeometry(LineGeometry const &l);
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END line.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start triangle.h
-//------------------------------------------------------------------------------
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    struct TriangleGeometry
-        : public Geometry<Point1, Point2, Point3>
-    {
-        vec3f const &p1() const { return value<Point1>().value(); }
-        vec3f const &p2() const { return value<Point2>().value(); }
-        vec3f const &p3() const { return value<Point3>().value(); }
-
-        vec3f &p1() { return value<Point1>().value(); }
-        vec3f &p2() { return value<Point2>().value(); }
-        vec3f &p3() { return value<Point3>().value(); }
-
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
-            std::uint16_t dimensions = 3;
-            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> vertices;
-
-            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> normals;
-        };
-    };
-
-    template <typename... Args>
-    TriangleGeometry Triangle(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2, Point3>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(
-            is_subset_of<required_args, std::tuple<Args...>> &&
-            is_subset_of<std::tuple<Args...>, TriangleGeometry::Args> &&
-            sizeof...(args) <= std::tuple_size<TriangleGeometry::Args>::value,
-            "You have provided incorrect parameters for Triangle. "
-            "Point1, Point2 and Point3 are required.");
-        TriangleGeometry t;
-        t.set(std::forward<Args>(args)...);
-        return t;
-    }
-
-    TriangleGeometry::Data generateGeometry(TriangleGeometry const &t);
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END triangle.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start quad.h
-//------------------------------------------------------------------------------
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    struct QuadGeometry
-        : public Geometry<Point1, Point2, Point3, Point4>
-    {
-
-        vec3f const &p1() const { return value<Point1>().value(); }
-        vec3f const &p2() const { return value<Point2>().value(); }
-        vec3f const &p3() const { return value<Point3>().value(); }
-        vec3f const &p4() const { return value<Point4>().value(); }
-
-        vec3f &p1() { return value<Point1>().value(); }
-        vec3f &p2() { return value<Point2>().value(); }
-        vec3f &p3() { return value<Point3>().value(); }
-        vec3f &p4() { return value<Point4>().value(); }
-
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
-            std::uint16_t dimensions = 3;
-
-            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> vertices;
-
-            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> normals;
-
-            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
-            std::vector<std::uint32_t> indices;
-
-            BufferUsageType uvsType = BufferUsageType::STATIC_DRAW;
-            std::vector<float> uvs;
-        };
-    };
-
-    template <typename... Args>
-    QuadGeometry Quad(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2, Point3>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-        static_assert(
-            is_subset_of<required_args, std::tuple<Args...>> &&
-            is_subset_of<std::tuple<Args...>, QuadGeometry::Args> &&
-            sizeof...(args) <= std::tuple_size<QuadGeometry::Args>::value,
-            "You have provided incorrect parameters for Quad. "
-            "Point1, Point2, and Point3 are required. Point4 is optional. "
-            "If you provide Point4, then you are responsible for ensuring it "
-            "is co-planar with Point1, Point2, and Point3");
-        QuadGeometry t;
-        if constexpr (sizeof...(args) > 0) {
-            t.set(std::forward<Args>(args)...);
-        }
-        if constexpr (sizeof...(args) == 3) {
-            t.set(Point4(t.p2() + (t.p3() - t.p1())));
-        }
-        return t;
-    }
-
-    QuadGeometry::Data generateGeometry(QuadGeometry const &t);
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END quad.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -11481,6 +10977,781 @@ namespace camera {
 }// end namespace givr
 //------------------------------------------------------------------------------
 // END orthographic.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start triangle.h
+//------------------------------------------------------------------------------
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    struct TriangleGeometry
+        : public Geometry<Point1, Point2, Point3>
+    {
+        vec3f const &p1() const { return value<Point1>().value(); }
+        vec3f const &p2() const { return value<Point2>().value(); }
+        vec3f const &p3() const { return value<Point3>().value(); }
+
+        vec3f &p1() { return value<Point1>().value(); }
+        vec3f &p2() { return value<Point2>().value(); }
+        vec3f &p3() { return value<Point3>().value(); }
+
+        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+            std::uint16_t dimensions = 3;
+            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> vertices;
+
+            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> normals;
+        };
+    };
+
+    template <typename... Args>
+    TriangleGeometry Triangle(Args &&... args) {
+        using required_args = std::tuple<Point1, Point2, Point3>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(
+            is_subset_of<required_args, std::tuple<Args...>> &&
+            is_subset_of<std::tuple<Args...>, TriangleGeometry::Args> &&
+            sizeof...(args) <= std::tuple_size<TriangleGeometry::Args>::value,
+            "You have provided incorrect parameters for Triangle. "
+            "Point1, Point2 and Point3 are required.");
+        TriangleGeometry t;
+        t.set(std::forward<Args>(args)...);
+        return t;
+    }
+
+    TriangleGeometry::Data generateGeometry(TriangleGeometry const &t);
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END triangle.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start custom.h
+//------------------------------------------------------------------------------
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    template <PrimitiveType PrimitiveT>
+    struct CustomGeometry {
+        std::vector<vec3f> vertices;
+        std::vector<vec3f> normals;
+        std::vector<std::uint32_t> indices;
+        std::vector<vec3f> colours;
+        std::vector<vec2f> uvs;
+
+        // TODO: add simpler ways to construct this.
+
+        struct Data : public VertextArrayData<PrimitiveT> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType;
+            BufferUsageType normalsType;
+            BufferUsageType indicesType;
+            BufferUsageType coloursType;
+
+            std::vector<float> vertices;
+            std::vector<float> normals;
+            std::vector<std::uint32_t> indices;
+            std::vector<float> colours;
+            std::vector<float> uvs;
+        };
+
+    };
+
+    template<typename VectorT, int vecsize>
+    void __customGeometryCopy(std::vector<VectorT> const &source, std::vector<float> &target) {
+        for (std::size_t i = 0; i < source.size(); ++i) {
+            for (std::size_t j = 0; j < vecsize; ++j) {
+                target.push_back(source[i][j]);
+            }
+        }
+    };
+
+    template <PrimitiveType PrimitiveT>
+    typename CustomGeometry<PrimitiveT>::Data generateGeometry(CustomGeometry<PrimitiveT> const &l) {
+        typename CustomGeometry<PrimitiveT>::Data data;
+
+        __customGeometryCopy<vec3f, 3>(l.vertices, data.vertices);
+        __customGeometryCopy<vec3f, 3>(l.normals, data.normals);
+        __customGeometryCopy<vec3f, 3>(l.colours, data.colours);
+        __customGeometryCopy<vec2f, 2>(l.uvs, data.uvs);
+
+        data.indices.insert(data.indices.end(), l.indices.begin(), l.indices.end());
+
+        return data;
+    }
+
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END custom.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start polyline.h
+//------------------------------------------------------------------------------
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    template <PrimitiveType LineType>
+    struct PolyLineGeometry {
+        static_assert(
+            LineType != PrimitiveType::LINE_LOOP ||
+            LineType != PrimitiveType::LINE_STRIP,
+            "PolyLine only supports LINE_LOOP or LINE_STRIP"
+        );
+        private:
+            std::vector<Point> m_points;
+        public:
+            std::vector<Point> &points() { return m_points; }
+            std::vector<Point> const &points() const { return m_points; }
+            std::vector<Point> &operator*() { return m_points; }
+            // TODO: expose more of the vector interface here, or
+            //       the conversion operator or something
+            void push_back(Point const &p) { m_points.push_back(p); }
+            void clear() { m_points.clear(); }
+
+        struct Data : public VertextArrayData<LineType> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType;
+            std::vector<float> vertices;
+        };
+    };
+
+    template <PrimitiveType LineType, typename... Args>
+    PolyLineGeometry<LineType> PolyLine(Args &&... args) {
+        PolyLineGeometry<LineType> geometry;
+        geometry.points() = {args...};
+        return geometry;
+    }
+
+    template <PrimitiveType LineType>
+    typename PolyLineGeometry<LineType>::Data generateGeometry(PolyLineGeometry<LineType> const &l) {
+        typename PolyLineGeometry<LineType>::Data data;
+        auto const &points = l.points();
+        data.vertices.reserve(points.size()*3);
+        for (std::size_t i = 0; i < points.size(); ++i) {
+            data.vertices.push_back(points[i].value()[0]);
+            data.vertices.push_back(points[i].value()[1]);
+            data.vertices.push_back(points[i].value()[2]);
+        }
+        return data;
+    }
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END polyline.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start quad.h
+//------------------------------------------------------------------------------
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    struct QuadGeometry
+        : public Geometry<Point1, Point2, Point3, Point4>
+    {
+
+        vec3f const &p1() const { return value<Point1>().value(); }
+        vec3f const &p2() const { return value<Point2>().value(); }
+        vec3f const &p3() const { return value<Point3>().value(); }
+        vec3f const &p4() const { return value<Point4>().value(); }
+
+        vec3f &p1() { return value<Point1>().value(); }
+        vec3f &p2() { return value<Point2>().value(); }
+        vec3f &p3() { return value<Point3>().value(); }
+        vec3f &p4() { return value<Point4>().value(); }
+
+        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> vertices;
+
+            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> normals;
+
+            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
+            std::vector<std::uint32_t> indices;
+
+            BufferUsageType uvsType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> uvs;
+        };
+    };
+
+    template <typename... Args>
+    QuadGeometry Quad(Args &&... args) {
+        using required_args = std::tuple<Point1, Point2, Point3>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+        static_assert(
+            is_subset_of<required_args, std::tuple<Args...>> &&
+            is_subset_of<std::tuple<Args...>, QuadGeometry::Args> &&
+            sizeof...(args) <= std::tuple_size<QuadGeometry::Args>::value,
+            "You have provided incorrect parameters for Quad. "
+            "Point1, Point2, and Point3 are required. Point4 is optional. "
+            "If you provide Point4, then you are responsible for ensuring it "
+            "is co-planar with Point1, Point2, and Point3");
+        QuadGeometry t;
+        if constexpr (sizeof...(args) > 0) {
+            t.set(std::forward<Args>(args)...);
+        }
+        if constexpr (sizeof...(args) == 3) {
+            t.set(Point4(t.p2() + (t.p3() - t.p1())));
+        }
+        return t;
+    }
+
+    QuadGeometry::Data generateGeometry(QuadGeometry const &t);
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END quad.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start mesh.h
+//------------------------------------------------------------------------------
+
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+namespace givr {
+namespace geometry {
+    struct MeshGeometry
+        : public Geometry<Filename>
+          // TODO: Add other parameters like smooth shading etc.
+    {
+
+        std::string const &filename() const { return value<Filename>().value(); }
+        std::string &filename() { return value<Filename>().value(); }
+
+        struct Data : VertextArrayData<PrimitiveType::TRIANGLES> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
+            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
+            BufferUsageType uvsType = BufferUsageType::STATIC_DRAW;
+
+            std::vector<float> vertices;
+            std::vector<float> normals;
+            std::vector<std::uint32_t> indices;
+            std::vector<float> uvs;
+        };
+    };
+
+    template <typename... Args>
+    MeshGeometry Mesh(Args &&... args) {
+        using required_args = std::tuple<Filename>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+            "Filename is a required parameter for Mesh. "
+            "Please provide them.");
+        static_assert(is_subset_of<std::tuple<Args...>, MeshGeometry::Args>,
+            "You have provided incorrect parameters for Mesh. "
+            "Filename is required.");
+        static_assert(sizeof...(args) <= std::tuple_size<MeshGeometry::Args>::value,
+            "You have provided incorrect parameters for Mesh. "
+            "Filename is required.");
+        MeshGeometry m;
+        m.set(std::forward<Args>(args)...);
+        return m;
+    }
+
+    MeshGeometry::Data generateGeometry(const MeshGeometry& m);
+
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END mesh.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start line.h
+//------------------------------------------------------------------------------
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    struct LineGeometry
+        : public Geometry<Point1, Point2>
+    {
+        vec3f const &p1() const { return value<Point1>().value(); }
+        vec3f const &p2() const { return value<Point2>().value(); }
+
+        vec3f &p1() { return value<Point1>().value(); }
+        vec3f &p2() { return value<Point2>().value(); }
+
+        struct Data : public VertextArrayData<PrimitiveType::LINES> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> vertices;
+        };
+    };
+
+    template <typename... Args>
+    LineGeometry Line(Args &&... args) {
+        using required_args = std::tuple<Point1, Point2>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+            "Point1 and Point2 are  a required parameter for Line. "
+            "Please provide them.");
+        static_assert(is_subset_of<std::tuple<Args...>, LineGeometry::Args>,
+            "You have provided incorrect parameters for Line. "
+            "Point1 and Point2 are required.");
+        static_assert(sizeof...(args) <= std::tuple_size<LineGeometry::Args>::value,
+            "You have provided incorrect parameters for Line. "
+            "Point1 and Point2 are required.");
+        LineGeometry l;
+        l.set(std::forward<Args>(args)...);
+        return l;
+    }
+
+    LineGeometry::Data generateGeometry(LineGeometry const &l);
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END line.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start cylinder.h
+//------------------------------------------------------------------------------
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    struct CylinderGeometry
+        : public Geometry<Point1, Point2, Radius, AzimuthPoints>
+    {
+        vec3f const &p1() const { return value<Point1>().value(); }
+        vec3f const &p2() const { return value<Point2>().value(); }
+
+        vec3f &p1() { return value<Point1>().value(); }
+        vec3f &p2() { return value<Point2>().value(); }
+
+        float radius() const { return value<Radius>().value(); }
+        std::size_t azimuthPoints() const { return value<AzimuthPoints>().value(); }
+
+        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> vertices;
+
+            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
+            std::vector<float> normals;
+
+            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
+            std::vector<std::uint32_t> indices;
+        };
+    };
+
+    template <typename... Args>
+    CylinderGeometry Cylinder(Args &&... args) {
+        using required_args = std::tuple<Point1, Point2>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+            "Point1 and Point2 are a required parameter for Cylinder. "
+            "Please provide them.");
+        static_assert(is_subset_of<std::tuple<Args...>, CylinderGeometry::Args>,
+            "You have provided incorrect parameters for Cylinder. "
+            "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
+        static_assert(sizeof...(args) <= std::tuple_size<CylinderGeometry::Args>::value,
+            "You have provided incorrect parameters for Cylinder. "
+            "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
+        CylinderGeometry c;
+        c.set(Point1(0.f, 0.5f, 0.f));
+        c.set(Point2(0.f, -0.5f, 0.f));
+        c.set(Radius(1.0f));
+        c.set(AzimuthPoints(20));
+        if constexpr (sizeof...(args) > 0) {
+            c.set(std::forward<Args>(args)...);
+        }
+        return c;
+    }
+
+    CylinderGeometry::Data generateGeometry(CylinderGeometry const &l);
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END cylinder.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start sphere.h
+//------------------------------------------------------------------------------
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+namespace givr {
+namespace geometry {
+
+    struct SphereGeometry
+        : public Geometry<Centroid, Radius, AzimuthPoints, AltitudePoints>
+    {
+
+        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+            std::uint16_t dimensions = 3;
+
+            BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+            BufferUsageType normalsType = BufferUsageType::STATIC_DRAW;
+            BufferUsageType indicesType = BufferUsageType::STATIC_DRAW;
+            BufferUsageType uvsType = BufferUsageType::STATIC_DRAW;
+
+            std::vector<float> vertices;
+            std::vector<float> normals;
+            std::vector<std::uint32_t> indices;
+            std::vector<float> uvs;
+        };
+
+    };
+
+    template <typename... Args>
+    SphereGeometry Sphere(Args &&... args) {
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(is_subset_of<std::tuple<Args...>, SphereGeometry::Args>,
+            "You have provided incorrect parameters for Sphere. "
+            "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
+        static_assert(sizeof...(args) <= std::tuple_size<SphereGeometry::Args>::value,
+            "You have provided incorrect parameters for Sphere. "
+            "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
+        SphereGeometry s;// = Sphere();
+        s.set(Centroid(0.0, 0.0, 0.0));
+        s.set(Radius(1.0));
+        s.set(AzimuthPoints(20.));
+        s.set(AltitudePoints(20.));
+        if constexpr (sizeof...(args) > 0) {
+            s.set(std::forward<Args>(args)...);
+        }
+        return s;
+    }
+
+    SphereGeometry::Data generateGeometry(SphereGeometry const &s);
+
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END sphere.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start lines.h
+//------------------------------------------------------------------------------
+
+
+#include <string>
+
+namespace givr {
+namespace style {
+
+    struct LineParameters : public Style<Colour, Width> {
+        LineParameters() {
+            set(Width(1.0));
+        }
+    };
+
+    struct LineRenderContext
+        : public RenderContext,
+          public LineParameters
+    {
+
+        void setUniforms(std::unique_ptr<Program> const &p) const;
+
+        std::string getVertexShaderSource() const;
+        std::string getFragmentShaderSource() const;
+    };
+
+    struct LineInstancedRenderContext
+        : public InstancedRenderContext,
+          public LineParameters
+    {
+
+        void setUniforms(std::unique_ptr<Program> const &p) const;
+
+        std::string getVertexShaderSource() const;
+        std::string getFragmentShaderSource() const;
+    };
+
+    struct LineStyle : public LineParameters {
+        using RenderContext = LineRenderContext;
+        using InstancedRenderContext = LineInstancedRenderContext;
+    };
+
+    template <typename... Args> LineStyle GL_Line(Args &&... args) {
+        using required_args = std::tuple<Colour>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+            "Colour is a required parameter for LineStyle. Please provide it.");
+        static_assert(is_subset_of<std::tuple<Args...>, LineStyle::Args>,
+            "You have provided incorrect parameters for LineStyle. "
+            "Colour is required. Width is optional.");
+        static_assert(sizeof...(args) <= std::tuple_size<LineStyle::Args>::value,
+            "You have provided incorrect parameters for LineStyle. "
+            "Colour is required. Width is optional.");
+        LineStyle ns;
+        ns.set(std::forward<Args>(args)...);
+        return ns;
+    }
+
+    template <typename GeometryT>
+    BufferData fillBuffers(GeometryT const &g, LineStyle const &) {
+        static_assert(
+            givr::isLineBased<GeometryT>(),
+            R"error(
+            The LineStyle style requires LINES, LINE_LOOP, LINE_STRIP,
+            LINES_ADJACENCY, or LINE_STRIP_ADJACENCY for the primitive
+            type. The geometry you use is not of this type"
+            )error"
+        );
+        static_assert(
+            hasVertices<GeometryT>::value,
+            R"error(
+            The LineStyle style requires vertices. The geometry you are using
+            does not provide them.
+            )error"
+        );
+        BufferData data;
+        typename GeometryT::Data d = generateGeometry(g);
+        data.dimensions = d.dimensions;
+        data.addVertices(d.vertices);
+
+        if constexpr (hasIndices<GeometryT>::value) {
+            data.indicesType = d.indicesType;
+            data.addIndices(d.indices);
+        }
+
+        // TODO: This could optionally support per vertex colouring too.
+        return std::move(data);
+    }
+
+    template <typename RenderContextT, typename GeometryT>
+    RenderContextT getContext(GeometryT &, LineStyle const &l) {
+        RenderContextT ctx;
+        ctx.shaderProgram = std::make_unique<Program>(
+            Shader{ctx.getVertexShaderSource(), GL_VERTEX_SHADER},
+            Shader{ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER}
+        );
+        ctx.primitive = getPrimitive<GeometryT>();
+        updateStyle(ctx, l);
+        return ctx;
+    }
+
+    template <typename GeometryT>
+    LineStyle::RenderContext
+    getContext(GeometryT &g, LineStyle const &l) {
+        return getContext<LineStyle::RenderContext, GeometryT>(g, l);
+    }
+
+    template <typename GeometryT>
+    LineStyle::InstancedRenderContext
+    getInstancedContext(GeometryT &g, LineStyle const &l) {
+        return getContext<LineStyle::InstancedRenderContext, GeometryT>(g, l);
+    }
+
+    template <typename RenderContextT>
+    void updateStyle(RenderContextT &ctx, LineStyle const &l) {
+        ctx.set(l.args);
+    }
+
+    template <typename ViewContextT>
+    void draw(LineStyle::InstancedRenderContext &ctx, ViewContextT const &viewCtx) {
+        glEnable(GL_LINE_SMOOTH);
+        glLineWidth(ctx.value<Width>());
+        drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
+            ctx.setUniforms(program);
+        });
+    }
+
+    template <typename ViewContextT>
+    void draw(LineStyle::RenderContext &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
+        glEnable(GL_LINE_SMOOTH);
+        glLineWidth(ctx.value<Width>());
+        drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
+            ctx.setUniforms(program);
+            program->setMat4("model", model);
+        });
+    }
+
+}// end style
+}// end namespace
+//------------------------------------------------------------------------------
+// END lines.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start noshading.h
+//------------------------------------------------------------------------------
+
+
+#include <string>
+
+namespace givr {
+namespace style {
+
+    struct NoShadingParameters : public Style<Colour> {
+    };
+
+    struct NoShadingInstancedRenderContext
+        : public InstancedRenderContext,
+          public NoShadingParameters
+    {
+        void setUniforms(std::unique_ptr<Program> const &p) const;
+
+        std::string getVertexShaderSource() const;
+        std::string getFragmentShaderSource() const;
+    };
+
+    struct NoShadingRenderContext
+        : public RenderContext,
+          public NoShadingParameters
+    {
+        void setUniforms(std::unique_ptr<Program> const &p) const;
+
+        std::string getVertexShaderSource() const;
+        std::string getFragmentShaderSource() const;
+    };
+
+    struct NoShadingStyle : public NoShadingParameters {
+        using InstancedRenderContext = NoShadingInstancedRenderContext;
+        using RenderContext = NoShadingRenderContext;
+    };
+
+    template <typename... Args> NoShadingStyle NoShading(Args &&... args) {
+        using required_args = std::tuple<Colour>;
+
+        using namespace utility;
+        static_assert(!has_duplicate_types<Args...>,
+            "The arguments you passed in have duplicate parameters");
+
+        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+            "Colour is a required parameter for NoShadingStyle. Please provide it.");
+        static_assert(is_subset_of<std::tuple<Args...>, NoShadingStyle::Args>,
+            "You have provided incorrect parameters for NoShadingStyle. "
+            "Colour is required.");
+        static_assert(sizeof...(args) <= std::tuple_size<NoShadingStyle::Args>::value,
+            "You have provided incorrect parameters for NoShadingStyle. "
+            "Colour is required.");
+        NoShadingStyle ns;
+        ns.set(std::forward<Args>(args)...);
+        return ns;
+    }
+
+    template <typename GeometryT>
+    BufferData fillBuffers(GeometryT const &g, NoShadingStyle const &) {
+        BufferData data;
+        typename GeometryT::Data d = generateGeometry(g);
+        data.dimensions = d.dimensions;
+        static_assert(hasVertices<GeometryT>::value, "The NoShadingStyle style requires vertices. The geometry you are using does not provide them.");
+        data.verticesType = d.verticesType;
+        data.addVertices(d.vertices);
+        if constexpr (hasIndices<GeometryT>::value) {
+            data.indicesType = d.indicesType;
+            data.addIndices(d.indices);
+        }
+        // TODO: this could probably have per vertex colouring too.
+        return std::move(data);
+    }
+
+    template <typename RenderContextT, typename GeometryT>
+    RenderContextT getContext(GeometryT &, NoShadingStyle const &f) {
+        RenderContextT ctx;
+        ctx.shaderProgram = std::make_unique<Program>(
+            Shader{ctx.getVertexShaderSource(), GL_VERTEX_SHADER},
+            Shader{ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER}
+        );
+        ctx.primitive = getPrimitive<GeometryT>();
+        updateStyle(ctx, f);
+        return ctx;
+    }
+
+    template <typename GeometryT>
+    NoShadingStyle::InstancedRenderContext
+    getInstancedContext(GeometryT &g, NoShadingStyle const &f) {
+        return getContext<NoShadingStyle::InstancedRenderContext, GeometryT>(g, f);
+    }
+
+    template <typename GeometryT>
+    NoShadingStyle::RenderContext
+    getContext(GeometryT &g, NoShadingStyle const &f) {
+        return getContext<NoShadingStyle::RenderContext, GeometryT>(g, f);
+    }
+
+    template <typename RenderContextT>
+    void updateStyle(RenderContextT &ctx, NoShadingStyle const &f) {
+        ctx.set(f.args);
+    }
+
+    template <typename ViewContextT>
+    void draw(NoShadingStyle::InstancedRenderContext &ctx, ViewContextT const &viewCtx) {
+        drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
+            ctx.setUniforms(program);
+        });
+    }
+
+    template <typename ViewContextT>
+    void draw(NoShadingStyle::RenderContext &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
+        drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
+            ctx.setUniforms(program);
+            program->setMat4("model", model);
+        });
+    }
+}// end namespace style
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END noshading.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -11785,320 +12056,6 @@ namespace givr {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start noshading.h
-//------------------------------------------------------------------------------
-
-
-#include <string>
-
-namespace givr {
-namespace style {
-
-    struct NoShadingParameters : public Style<Colour> {
-    };
-
-    struct NoShadingInstancedRenderContext
-        : public InstancedRenderContext,
-          public NoShadingParameters
-    {
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct NoShadingRenderContext
-        : public RenderContext,
-          public NoShadingParameters
-    {
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct NoShadingStyle : public NoShadingParameters {
-        using InstancedRenderContext = NoShadingInstancedRenderContext;
-        using RenderContext = NoShadingRenderContext;
-    };
-
-    template <typename... Args> NoShadingStyle NoShading(Args &&... args) {
-        using required_args = std::tuple<Colour>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Colour is a required parameter for NoShadingStyle. Please provide it.");
-        static_assert(is_subset_of<std::tuple<Args...>, NoShadingStyle::Args>,
-            "You have provided incorrect parameters for NoShadingStyle. "
-            "Colour is required.");
-        static_assert(sizeof...(args) <= std::tuple_size<NoShadingStyle::Args>::value,
-            "You have provided incorrect parameters for NoShadingStyle. "
-            "Colour is required.");
-        NoShadingStyle ns;
-        ns.set(std::forward<Args>(args)...);
-        return ns;
-    }
-
-    template <typename GeometryT>
-    BufferData fillBuffers(GeometryT const &g, NoShadingStyle const &) {
-        BufferData data;
-        typename GeometryT::Data d = generateGeometry(g);
-        data.dimensions = d.dimensions;
-        static_assert(hasVertices<GeometryT>::value, "The NoShadingStyle style requires vertices. The geometry you are using does not provide them.");
-        data.verticesType = d.verticesType;
-        data.addVertices(d.vertices);
-        if constexpr (hasIndices<GeometryT>::value) {
-            data.indicesType = d.indicesType;
-            data.addIndices(d.indices);
-        }
-        // TODO: this could probably have per vertex colouring too.
-        return std::move(data);
-    }
-
-    template <typename RenderContextT, typename GeometryT>
-    RenderContextT getContext(GeometryT &, NoShadingStyle const &f) {
-        RenderContextT ctx;
-        ctx.shaderProgram = std::make_unique<Program>(
-            Shader{ctx.getVertexShaderSource(), GL_VERTEX_SHADER},
-            Shader{ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER}
-        );
-        ctx.primitive = getPrimitive<GeometryT>();
-        updateStyle(ctx, f);
-        return ctx;
-    }
-
-    template <typename GeometryT>
-    NoShadingStyle::InstancedRenderContext
-    getInstancedContext(GeometryT &g, NoShadingStyle const &f) {
-        return getContext<NoShadingStyle::InstancedRenderContext, GeometryT>(g, f);
-    }
-
-    template <typename GeometryT>
-    NoShadingStyle::RenderContext
-    getContext(GeometryT &g, NoShadingStyle const &f) {
-        return getContext<NoShadingStyle::RenderContext, GeometryT>(g, f);
-    }
-
-    template <typename RenderContextT>
-    void updateStyle(RenderContextT &ctx, NoShadingStyle const &f) {
-        ctx.set(f.args);
-    }
-
-    template <typename ViewContextT>
-    void draw(NoShadingStyle::InstancedRenderContext &ctx, ViewContextT const &viewCtx) {
-        drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
-        });
-    }
-
-    template <typename ViewContextT>
-    void draw(NoShadingStyle::RenderContext &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
-        drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
-            program->setMat4("model", model);
-        });
-    }
-}// end namespace style
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END noshading.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start lines.h
-//------------------------------------------------------------------------------
-
-
-#include <string>
-
-namespace givr {
-namespace style {
-
-    struct LineParameters : public Style<Colour, Width> {
-        LineParameters() {
-            set(Width(1.0));
-        }
-    };
-
-    struct LineRenderContext
-        : public RenderContext,
-          public LineParameters
-    {
-
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct LineInstancedRenderContext
-        : public InstancedRenderContext,
-          public LineParameters
-    {
-
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct LineStyle : public LineParameters {
-        using RenderContext = LineRenderContext;
-        using InstancedRenderContext = LineInstancedRenderContext;
-    };
-
-    template <typename... Args> LineStyle GL_Line(Args &&... args) {
-        using required_args = std::tuple<Colour>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Colour is a required parameter for LineStyle. Please provide it.");
-        static_assert(is_subset_of<std::tuple<Args...>, LineStyle::Args>,
-            "You have provided incorrect parameters for LineStyle. "
-            "Colour is required. Width is optional.");
-        static_assert(sizeof...(args) <= std::tuple_size<LineStyle::Args>::value,
-            "You have provided incorrect parameters for LineStyle. "
-            "Colour is required. Width is optional.");
-        LineStyle ns;
-        ns.set(std::forward<Args>(args)...);
-        return ns;
-    }
-
-    template <typename GeometryT>
-    BufferData fillBuffers(GeometryT const &g, LineStyle const &) {
-        static_assert(
-            givr::isLineBased<GeometryT>(),
-            R"error(
-            The LineStyle style requires LINES, LINE_LOOP, LINE_STRIP,
-            LINES_ADJACENCY, or LINE_STRIP_ADJACENCY for the primitive
-            type. The geometry you use is not of this type"
-            )error"
-        );
-        static_assert(
-            hasVertices<GeometryT>::value,
-            R"error(
-            The LineStyle style requires vertices. The geometry you are using
-            does not provide them.
-            )error"
-        );
-        BufferData data;
-        typename GeometryT::Data d = generateGeometry(g);
-        data.dimensions = d.dimensions;
-        data.addVertices(d.vertices);
-
-        if constexpr (hasIndices<GeometryT>::value) {
-            data.indicesType = d.indicesType;
-            data.addIndices(d.indices);
-        }
-
-        // TODO: This could optionally support per vertex colouring too.
-        return std::move(data);
-    }
-
-    template <typename RenderContextT, typename GeometryT>
-    RenderContextT getContext(GeometryT &, LineStyle const &l) {
-        RenderContextT ctx;
-        ctx.shaderProgram = std::make_unique<Program>(
-            Shader{ctx.getVertexShaderSource(), GL_VERTEX_SHADER},
-            Shader{ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER}
-        );
-        ctx.primitive = getPrimitive<GeometryT>();
-        updateStyle(ctx, l);
-        return ctx;
-    }
-
-    template <typename GeometryT>
-    LineStyle::RenderContext
-    getContext(GeometryT &g, LineStyle const &l) {
-        return getContext<LineStyle::RenderContext, GeometryT>(g, l);
-    }
-
-    template <typename GeometryT>
-    LineStyle::InstancedRenderContext
-    getInstancedContext(GeometryT &g, LineStyle const &l) {
-        return getContext<LineStyle::InstancedRenderContext, GeometryT>(g, l);
-    }
-
-    template <typename RenderContextT>
-    void updateStyle(RenderContextT &ctx, LineStyle const &l) {
-        ctx.set(l.args);
-    }
-
-    template <typename ViewContextT>
-    void draw(LineStyle::InstancedRenderContext &ctx, ViewContextT const &viewCtx) {
-        glEnable(GL_LINE_SMOOTH);
-        glLineWidth(ctx.value<Width>());
-        drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
-        });
-    }
-
-    template <typename ViewContextT>
-    void draw(LineStyle::RenderContext &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
-        glEnable(GL_LINE_SMOOTH);
-        glLineWidth(ctx.value<Width>());
-        drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
-            program->setMat4("model", model);
-        });
-    }
-
-}// end style
-}// end namespace
-//------------------------------------------------------------------------------
-// END lines.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start multiline.h
-//------------------------------------------------------------------------------
-#include <vector>
-
-
-namespace givr {
-namespace geometry {
-
-    struct MultiLineGeometry {
-        private:
-            std::vector<LineGeometry> m_segments;
-
-        public:
-            std::vector<LineGeometry> &segments() { return m_segments; }
-            std::vector<LineGeometry> const &segments() const { return m_segments; }
-            std::vector<LineGeometry> &operator*() { return m_segments; }
-
-            void push_back(LineGeometry l);
-
-            struct Data : public VertextArrayData<PrimitiveType::LINES> {
-                std::uint16_t dimensions = 3;
-
-                BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
-                std::vector<float> vertices;
-            };
-    };
-
-    template <typename... Args>
-    MultiLineGeometry MultiLine(Args &&... args) {
-        // TODO: we could do better compile time checking here.
-        MultiLineGeometry geometry;
-        geometry.segments() = {args...};
-        return geometry;
-    }
-
-    MultiLineGeometry::Data generateGeometry(MultiLineGeometry const &l);
-}// end namespace geometry
-}// end namespace givr
-//------------------------------------------------------------------------------
-// END multiline.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 // Start triangle_soup.h
 //------------------------------------------------------------------------------
 #include <vector>
@@ -12147,5 +12104,48 @@ namespace geometry {
 }// end namespace givr
 //------------------------------------------------------------------------------
 // END triangle_soup.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start multiline.h
+//------------------------------------------------------------------------------
+#include <vector>
+
+
+namespace givr {
+namespace geometry {
+
+    struct MultiLineGeometry {
+        private:
+            std::vector<LineGeometry> m_segments;
+
+        public:
+            std::vector<LineGeometry> &segments() { return m_segments; }
+            std::vector<LineGeometry> const &segments() const { return m_segments; }
+            std::vector<LineGeometry> &operator*() { return m_segments; }
+
+            void push_back(LineGeometry l);
+
+            struct Data : public VertextArrayData<PrimitiveType::LINES> {
+                std::uint16_t dimensions = 3;
+
+                BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
+                std::vector<float> vertices;
+            };
+    };
+
+    template <typename... Args>
+    MultiLineGeometry MultiLine(Args &&... args) {
+        // TODO: we could do better compile time checking here.
+        MultiLineGeometry geometry;
+        geometry.segments() = {args...};
+        return geometry;
+    }
+
+    MultiLineGeometry::Data generateGeometry(MultiLineGeometry const &l);
+}// end namespace geometry
+}// end namespace givr
+//------------------------------------------------------------------------------
+// END multiline.h
 //------------------------------------------------------------------------------
 

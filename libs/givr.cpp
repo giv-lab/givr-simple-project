@@ -11,6 +11,233 @@
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+// Start renderer.cpp
+//------------------------------------------------------------------------------
+
+namespace givr {
+    void allocateBuffers(RenderContext &ctx) {
+        ctx.vao = std::make_unique<VertexArray>();
+        ctx.vao->alloc();
+
+        // Map - but don't upload indices data
+        std::unique_ptr<Buffer> indices = std::make_unique<Buffer>();
+        indices->alloc();
+        ctx.arrayBuffers.push_back(std::move(indices));
+
+        auto allocateBuffer = [&ctx]() {
+            std::unique_ptr<Buffer> vbo = std::make_unique<Buffer>();
+            vbo->alloc();
+            ctx.arrayBuffers.push_back(std::move(vbo));
+        };
+
+        // Upload / bind / map model data
+        allocateBuffer();//data.vertices);
+        allocateBuffer();//data.normals);
+        allocateBuffer();//data.uvs);
+        allocateBuffer();//data.colours);
+    }
+
+    void uploadBuffers(
+        RenderContext &ctx,
+        BufferData const &data
+    ) {
+        // Start by setting the appropriate context variables for rendering.
+        ctx.numberOfIndices = data.indices.size();
+        ctx.startIndex = 0;
+        ctx.endIndex =  data.vertices.size() / data.dimensions;
+
+        std::uint16_t vaIndex = 0;
+        ctx.vao->bind();
+
+        std::unique_ptr<Buffer> &indices = ctx.arrayBuffers[0];
+        indices->bind(GL_ELEMENT_ARRAY_BUFFER);
+        indices->data(
+                GL_ELEMENT_ARRAY_BUFFER,
+                data.indices,
+                getBufferUsageType(data.indicesType));
+
+        std::uint16_t bufferIndex = 1;
+        auto applyBuffer = [&ctx, &vaIndex, &bufferIndex](
+            GLenum type,
+            GLuint size,
+            GLenum bufferType,
+            std::vector<float> const &data
+        ) {
+            // if this data piece is empty
+            if (data.size() == 0) {
+                ++bufferIndex;
+                return;
+            }
+            std::unique_ptr<Buffer> &vbo = ctx.arrayBuffers[bufferIndex];
+            vbo->bind(type);
+            vbo->data(type, data, bufferType);
+            glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+            glEnableVertexAttribArray(vaIndex);
+            ++vaIndex;
+            ++bufferIndex;
+        };
+
+        // Upload / bind / map model data
+        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), data.vertices);
+        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), data.normals);
+        applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), data.uvs);
+        applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), data.colours);
+
+        ctx.vao->unbind();
+
+        ctx.arrayBuffers[0]->unbind(GL_ELEMENT_ARRAY_BUFFER);
+        if (ctx.arrayBuffers.size() > 1) {
+            ctx.arrayBuffers[1]->unbind(GL_ARRAY_BUFFER);
+        }
+    }
+};// end namespace givr
+//------------------------------------------------------------------------------
+// END renderer.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start cube.cpp
+//------------------------------------------------------------------------------
+
+std::vector<float> givr::generate_vertices(cube const &) {
+    return std::vector<float>{
+        -1.0, -1.0,  1.0,
+        1.0, -1.0,  1.0,
+        -1.0,  1.0,  1.0,
+        1.0,  1.0,  1.0,
+        -1.0, -1.0, -1.0,
+        1.0, -1.0, -1.0,
+        -1.0,  1.0, -1.0,
+        1.0,  1.0, -1.0
+    };
+}
+
+std::vector<std::uint32_t> givr::generate_indices(cube const &) {
+    return std::vector<std::uint32_t>{
+        0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1
+    };
+}
+//------------------------------------------------------------------------------
+// END cube.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start buffer_data.cpp
+//------------------------------------------------------------------------------
+
+using BufferData = givr::BufferData;
+using vec3f = givr::vec3f;
+
+void BufferData::addIndices(std::vector<GLuint> const &newIndices) {
+    indices.insert(indices.end(), newIndices.begin(), newIndices.end());
+}
+void BufferData::addVertices(std::vector<float> const &newVertices) {
+    vertices.insert(vertices.end(), newVertices.begin(), newVertices.end());
+}
+void BufferData::addVertices(std::vector<vec3f> const &newVertices) {
+    vertices.resize(newVertices.size()*3);
+    for (size_t i = 0; i < newVertices.size(); ++i) {
+        vertices[(i*3)] = newVertices[i][0];
+        vertices[(i*3)+1] = newVertices[i][1];
+        vertices[(i*3)+2] = newVertices[i][2];
+    }
+}
+void BufferData::addNormals(std::vector<float> const &newNormals) {
+    normals.insert(normals.end(), newNormals.begin(), newNormals.end());
+}
+void BufferData::addNormals(std::vector<vec3f> const &newNormals) {
+    normals.resize(newNormals.size()*3);
+    for (size_t i = 0; i < newNormals.size(); ++i) {
+        normals[(i*3)] = newNormals[i][0];
+        normals[(i*3)+1] = newNormals[i][1];
+        normals[(i*3)+2] = newNormals[i][2];
+    }
+}
+void BufferData::addUvs(std::vector<float> const &newUvs) {
+    uvs.insert(uvs.end(), newUvs.begin(), newUvs.end());
+}
+/*TODO: void BufferData::addUvs(std::vector<vec3f> const &newUvs) {
+    uvs.reserve(newUvs.size()*2);
+    for (size_t i = 0; i < uvs.size(); ++i) {
+        uvs[(i*3)] = newUvs[i][0];
+        uvs[(i*3)+1] = newUvs[i][1];
+    }
+}*/
+void BufferData::addColours(std::vector<float> const &newColours) {
+    colours.insert(colours.end(), newColours.begin(), newColours.end());
+}
+void BufferData::addColours(std::vector<vec3f> const &newColours) {
+    colours.resize(newColours.size()*3);
+    for (size_t i = 0; i < newColours.size(); ++i) {
+        colours[(i*3)] = newColours[i][0];
+        colours[(i*3)+1] = newColours[i][1];
+        colours[(i*3)+2] = newColours[i][2];
+    }
+}
+//------------------------------------------------------------------------------
+// END buffer_data.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start draw.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// END draw.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start types.cpp
+//------------------------------------------------------------------------------
+
+using PrimitiveType = givr::PrimitiveType;
+using BufferUsageType = givr::BufferUsageType;
+
+GLenum givr::getMode(PrimitiveType const &t) {
+    switch(t) {
+        case PrimitiveType::POINTS:
+            return GL_POINTS;
+        case PrimitiveType::LINES:
+            return GL_LINES;
+        case PrimitiveType::LINE_LOOP:
+            return GL_LINE_LOOP;
+        case PrimitiveType::LINE_STRIP:
+            return GL_LINE_STRIP;
+        case PrimitiveType::TRIANGLES:
+            return GL_TRIANGLES;
+        case PrimitiveType::TRIANGLE_STRIP:
+            return GL_TRIANGLE_STRIP;
+        case PrimitiveType::TRIANGLE_FAN:
+            return GL_TRIANGLE_FAN;
+        case PrimitiveType::LINES_ADJACENCY:
+            return GL_LINES_ADJACENCY;
+        case PrimitiveType::LINE_STRIP_ADJACENCY:
+            return GL_LINE_STRIP_ADJACENCY;
+        case PrimitiveType::TRIANGLES_ADJACENCY:
+            return GL_TRIANGLES_ADJACENCY;
+        case PrimitiveType::TRIANGLE_STRIP_ADJACENCY:
+            return GL_TRIANGLE_STRIP_ADJACENCY;
+        default:
+            return GL_TRIANGLES;
+    }
+}
+
+GLenum givr::getBufferUsageType(BufferUsageType const &d) {
+    switch(d) {
+        case BufferUsageType::STATIC_DRAW:
+            return GL_STATIC_DRAW;
+        case BufferUsageType::DYNAMIC_DRAW:
+            return GL_DYNAMIC_DRAW;
+        default:
+            return GL_STATIC_DRAW;
+    }
+
+}
+//------------------------------------------------------------------------------
+// END types.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 // Start instanced_renderer.cpp
 //------------------------------------------------------------------------------
 
@@ -110,230 +337,144 @@ namespace givr {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start draw.cpp
+// Start turntable.cpp
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-// END draw.cpp
-//------------------------------------------------------------------------------
+#include <glm/gtc/matrix_transform.hpp>
 
-//------------------------------------------------------------------------------
-// Start cube.cpp
-//------------------------------------------------------------------------------
+#include <cmath>
+#include <iostream>
 
-std::vector<float> givr::generate_vertices(cube const &) {
-    return std::vector<float>{
-        -1.0, -1.0,  1.0,
-        1.0, -1.0,  1.0,
-        -1.0,  1.0,  1.0,
-        1.0,  1.0,  1.0,
-        -1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0,
-        -1.0,  1.0, -1.0,
-        1.0,  1.0, -1.0
-    };
-}
-
-std::vector<std::uint32_t> givr::generate_indices(cube const &) {
-    return std::vector<std::uint32_t>{
-        0, 1, 2, 3, 7, 1, 5, 4, 7, 6, 2, 4, 0, 1
-    };
-}
-//------------------------------------------------------------------------------
-// END cube.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start buffer_data.cpp
-//------------------------------------------------------------------------------
-
-using BufferData = givr::BufferData;
+using mat4f = givr::mat4f;
 using vec3f = givr::vec3f;
+using TurnTableCamera = givr::camera::TurnTableCamera;
 
-void BufferData::addIndices(std::vector<GLuint> const &newIndices) {
-    indices.insert(indices.end(), newIndices.begin(), newIndices.end());
+float angle_to_x(float r, float theta, float phi) {
+    return r * sin(theta) * sin(phi);
 }
-void BufferData::addVertices(std::vector<float> const &newVertices) {
-    vertices.insert(vertices.end(), newVertices.begin(), newVertices.end());
+float angle_to_y(float r, float phi) {
+    return r * cos(phi);
 }
-void BufferData::addVertices(std::vector<vec3f> const &newVertices) {
-    vertices.resize(newVertices.size()*3);
-    for (size_t i = 0; i < newVertices.size(); ++i) {
-        vertices[(i*3)] = newVertices[i][0];
-        vertices[(i*3)+1] = newVertices[i][1];
-        vertices[(i*3)+2] = newVertices[i][2];
+float angle_to_z(float r, float theta, float phi) {
+    return r * cos(theta) * sin(phi);
+}
+
+
+mat4f TurnTableCamera::viewMatrix() const {
+    vec3f camera_position{
+        angle_to_x(zoom(), longitude(), latitude()),
+        angle_to_y(zoom(), latitude()),
+        angle_to_z(zoom(), longitude(), latitude())
+    };
+    camera_position += translation();
+    vec3f up{ 0., 1., 0. };
+    vec3f binormal = cross(camera_position, up);
+    up = glm::normalize(cross(binormal, camera_position));
+
+    return glm::lookAt(camera_position, translation(), up);
+}
+
+vec3f TurnTableCamera::viewPosition() const {
+    return vec3f{
+        angle_to_x(zoom(), longitude(), latitude()),
+        angle_to_y(zoom(), latitude()),
+        angle_to_z(zoom(), longitude(), latitude()) };
+}
+
+void TurnTableCamera::rotateAroundXPercent(float perc) {
+    rotateAroundX(perc * LONGITUDE_MAX);
+}
+void TurnTableCamera::rotateAroundYPercent(float perc) {
+    rotateAroundY(perc * LATITUDE_MAX);
+}
+
+void TurnTableCamera::rotateAroundX(float angle) {
+    longitude() += angle;
+}
+void TurnTableCamera::rotateAroundY(float angle) {
+    latitude() = std::fmin(std::fmax(latitude() + angle, 0.001f), M_PI - 0.001f);
+}
+void TurnTableCamera::zoom(float amount) {
+    zoom() += amount;
+    zoom() = std::fmax(0, zoom());
+}
+void TurnTableCamera::translate(vec3f amount) {
+    translation() += amount;
+}
+
+//------------------------------------------------------------------------------
+// END turntable.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start perspective.cpp
+//------------------------------------------------------------------------------
+
+#include <glm/gtc/matrix_transform.hpp>
+
+using PerspectiveProjection = givr::camera::PerspectiveProjection;
+
+givr::mat4f PerspectiveProjection::projectionMatrix() const {
+    return glm::perspective(
+        glm::radians(fieldOfViewY()),
+        aspectRatio(),
+        nearDistance(),
+        farDistance()
+    );
+}
+
+void PerspectiveProjection::updateAspectRatio(int width, int height) {
+    float w = static_cast<float>(width);
+    float h = static_cast<float>(height);
+
+    set(AspectRatio(w / h));
+}
+//------------------------------------------------------------------------------
+// END perspective.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start orthographic.cpp
+//------------------------------------------------------------------------------
+
+#include <glm/gtc/matrix_transform.hpp>
+
+using OrthographicProjection = givr::camera::OrthographicProjection;
+using mat4f = givr::mat4f;
+
+mat4f OrthographicProjection::projectionMatrix() const {
+    // TODO: This assumes a view centred on the origin
+    auto ar = aspectRatio();
+    if (ar < 1) {
+        // taller than we are wide
+        return glm::ortho(
+            left(),
+            right(),
+            bottom() / ar,
+            top() / ar,
+            nearDistance(),
+            farDistance()
+        );
+    } else {
+        // Wider than we are tall
+        return glm::ortho(
+            left() * ar,
+            right() * ar,
+            bottom(),
+            top(),
+            nearDistance(),
+            farDistance()
+        );
     }
 }
-void BufferData::addNormals(std::vector<float> const &newNormals) {
-    normals.insert(normals.end(), newNormals.begin(), newNormals.end());
-}
-void BufferData::addNormals(std::vector<vec3f> const &newNormals) {
-    normals.resize(newNormals.size()*3);
-    for (size_t i = 0; i < newNormals.size(); ++i) {
-        normals[(i*3)] = newNormals[i][0];
-        normals[(i*3)+1] = newNormals[i][1];
-        normals[(i*3)+2] = newNormals[i][2];
-    }
-}
-void BufferData::addUvs(std::vector<float> const &newUvs) {
-    uvs.insert(uvs.end(), newUvs.begin(), newUvs.end());
-}
-/*TODO: void BufferData::addUvs(std::vector<vec3f> const &newUvs) {
-    uvs.reserve(newUvs.size()*2);
-    for (size_t i = 0; i < uvs.size(); ++i) {
-        uvs[(i*3)] = newUvs[i][0];
-        uvs[(i*3)+1] = newUvs[i][1];
-    }
-}*/
-void BufferData::addColours(std::vector<float> const &newColours) {
-    colours.insert(colours.end(), newColours.begin(), newColours.end());
-}
-void BufferData::addColours(std::vector<vec3f> const &newColours) {
-    colours.resize(newColours.size()*3);
-    for (size_t i = 0; i < newColours.size(); ++i) {
-        colours[(i*3)] = newColours[i][0];
-        colours[(i*3)+1] = newColours[i][1];
-        colours[(i*3)+2] = newColours[i][2];
-    }
+void OrthographicProjection::updateAspectRatio(int width, int height) {
+    float w = static_cast<float>(width);
+    float h = static_cast<float>(height);
+
+    set(AspectRatio(w / h));
 }
 //------------------------------------------------------------------------------
-// END buffer_data.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start renderer.cpp
-//------------------------------------------------------------------------------
-
-namespace givr {
-    void allocateBuffers(RenderContext &ctx) {
-        ctx.vao = std::make_unique<VertexArray>();
-        ctx.vao->alloc();
-
-        // Map - but don't upload indices data
-        std::unique_ptr<Buffer> indices = std::make_unique<Buffer>();
-        indices->alloc();
-        ctx.arrayBuffers.push_back(std::move(indices));
-
-        auto allocateBuffer = [&ctx]() {
-            std::unique_ptr<Buffer> vbo = std::make_unique<Buffer>();
-            vbo->alloc();
-            ctx.arrayBuffers.push_back(std::move(vbo));
-        };
-
-        // Upload / bind / map model data
-        allocateBuffer();//data.vertices);
-        allocateBuffer();//data.normals);
-        allocateBuffer();//data.uvs);
-        allocateBuffer();//data.colours);
-    }
-
-    void uploadBuffers(
-        RenderContext &ctx,
-        BufferData const &data
-    ) {
-        // Start by setting the appropriate context variables for rendering.
-        ctx.numberOfIndices = data.indices.size();
-        ctx.startIndex = 0;
-        ctx.endIndex =  data.vertices.size() / data.dimensions;
-
-        std::uint16_t vaIndex = 0;
-        ctx.vao->bind();
-
-        std::unique_ptr<Buffer> &indices = ctx.arrayBuffers[0];
-        indices->bind(GL_ELEMENT_ARRAY_BUFFER);
-        indices->data(
-                GL_ELEMENT_ARRAY_BUFFER,
-                data.indices,
-                getBufferUsageType(data.indicesType));
-
-        std::uint16_t bufferIndex = 1;
-        auto applyBuffer = [&ctx, &vaIndex, &bufferIndex](
-            GLenum type,
-            GLuint size,
-            GLenum bufferType,
-            std::vector<float> const &data
-        ) {
-            // if this data piece is empty
-            if (data.size() == 0) {
-                ++bufferIndex;
-                return;
-            }
-            std::unique_ptr<Buffer> &vbo = ctx.arrayBuffers[bufferIndex];
-            vbo->bind(type);
-            vbo->data(type, data, bufferType);
-            glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-            glEnableVertexAttribArray(vaIndex);
-            ++vaIndex;
-            ++bufferIndex;
-        };
-
-        // Upload / bind / map model data
-        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), data.vertices);
-        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), data.normals);
-        applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), data.uvs);
-        applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), data.colours);
-
-        ctx.vao->unbind();
-
-        ctx.arrayBuffers[0]->unbind(GL_ELEMENT_ARRAY_BUFFER);
-        if (ctx.arrayBuffers.size() > 1) {
-            ctx.arrayBuffers[1]->unbind(GL_ARRAY_BUFFER);
-        }
-    }
-};// end namespace givr
-//------------------------------------------------------------------------------
-// END renderer.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start types.cpp
-//------------------------------------------------------------------------------
-
-using PrimitiveType = givr::PrimitiveType;
-using BufferUsageType = givr::BufferUsageType;
-
-GLenum givr::getMode(PrimitiveType const &t) {
-    switch(t) {
-        case PrimitiveType::POINTS:
-            return GL_POINTS;
-        case PrimitiveType::LINES:
-            return GL_LINES;
-        case PrimitiveType::LINE_LOOP:
-            return GL_LINE_LOOP;
-        case PrimitiveType::LINE_STRIP:
-            return GL_LINE_STRIP;
-        case PrimitiveType::TRIANGLES:
-            return GL_TRIANGLES;
-        case PrimitiveType::TRIANGLE_STRIP:
-            return GL_TRIANGLE_STRIP;
-        case PrimitiveType::TRIANGLE_FAN:
-            return GL_TRIANGLE_FAN;
-        case PrimitiveType::LINES_ADJACENCY:
-            return GL_LINES_ADJACENCY;
-        case PrimitiveType::LINE_STRIP_ADJACENCY:
-            return GL_LINE_STRIP_ADJACENCY;
-        case PrimitiveType::TRIANGLES_ADJACENCY:
-            return GL_TRIANGLES_ADJACENCY;
-        case PrimitiveType::TRIANGLE_STRIP_ADJACENCY:
-            return GL_TRIANGLE_STRIP_ADJACENCY;
-        default:
-            return GL_TRIANGLES;
-    }
-}
-
-GLenum givr::getBufferUsageType(BufferUsageType const &d) {
-    switch(d) {
-        case BufferUsageType::STATIC_DRAW:
-            return GL_STATIC_DRAW;
-        case BufferUsageType::DYNAMIC_DRAW:
-            return GL_DYNAMIC_DRAW;
-        default:
-            return GL_STATIC_DRAW;
-    }
-
-}
-//------------------------------------------------------------------------------
-// END types.cpp
+// END orthographic.cpp
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -685,185 +826,6 @@ std::string nsirc::getFragmentShaderSource() const {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start sphere.cpp
-//------------------------------------------------------------------------------
-
-#include <cassert>
-#include <cmath>
-
-using SphereGeometry = givr::geometry::SphereGeometry;
-
-SphereGeometry::Data givr::geometry::generateGeometry(SphereGeometry const &s) {
-    SphereGeometry::Data data;
-
-    // TODO: should make this reserve the space necessary for the sphere.
-
-    struct point { float v[3]; };
-    //Azimuth: 0 to 2pi, Altitude: 0 to pi
-    auto sphereFunc = [](float azi, float alt) {
-        return point{ std::cos(azi)*std::sin(alt), std::cos(alt), std::sin(azi)*std::sin(alt) };
-    };
-    auto azimuthPoints = s.value<AzimuthPoints>().value();
-    auto altitudePoints = s.value<AltitudePoints>().value();
-    auto centroid = s.value<Centroid>().value();
-    auto radius = s.value<Radius>().value();
-
-    for (size_t azi = 0; azi < azimuthPoints; azi++) {
-        for (size_t alt = 0; alt < altitudePoints; alt++) {
-            if (azi < azimuthPoints - 1 && alt < altitudePoints - 1) {
-                data.indices.push_back((alt + 1) + (azi + 1)* altitudePoints);
-                data.indices.push_back((alt + 1) + azi * altitudePoints);
-                data.indices.push_back(alt + azi * altitudePoints);
-
-                data.indices.push_back(alt + (azi + 1)*altitudePoints);
-                data.indices.push_back((alt + 1) + (azi + 1)*altitudePoints);
-                data.indices.push_back(alt + azi * altitudePoints);
-            }
-            else if(alt < altitudePoints - 1){
-                data.indices.push_back((alt + 1));
-                data.indices.push_back((alt + 1) + azi * altitudePoints);
-                data.indices.push_back(alt + azi * altitudePoints);
-
-                data.indices.push_back(alt);
-                data.indices.push_back((alt + 1));
-                data.indices.push_back(alt + azi * altitudePoints);
-            }
-            float u = float(azi) / float(azimuthPoints - 1);
-            float v = float(alt) / float(altitudePoints - 1);
-            //Make uniform distribution
-            v = acos(1 - 2.f*v) / M_PI;     //DELETE THIS IF SPHERES LOOK BAD
-
-            point spherePoint = sphereFunc(2.f*M_PI*u, M_PI*v);
-            data.vertices.push_back((radius * spherePoint.v[0]) + centroid[0]);
-            data.vertices.push_back((radius * spherePoint.v[1]) + centroid[1]);
-            data.vertices.push_back((radius * spherePoint.v[2]) + centroid[2]);
-
-            data.normals.push_back(spherePoint.v[0]);
-            data.normals.push_back(spherePoint.v[1]);
-            data.normals.push_back(spherePoint.v[2]);
-
-            data.uvs.push_back(u);
-            data.uvs.push_back(v);
-        }
-    }
-
-    assert(data.vertices.size() == data.normals.size());
-
-    return data;
-}
-//------------------------------------------------------------------------------
-// END sphere.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start triangle.cpp
-//------------------------------------------------------------------------------
-
-using TriangleGeometry = givr::geometry::TriangleGeometry;
-
-TriangleGeometry::Data givr::geometry::generateGeometry(TriangleGeometry const &t) {
-    TriangleGeometry::Data data;
-    vec3f normal = glm::normalize(glm::cross(t.p2()-t.p1(), t.p3()-t.p1()));
-    data.normals.reserve(9);
-    data.vertices.reserve(9);
-    auto push_vertex = [&](vec3f const &p) {
-        for(std::size_t i = 0; i < 3; ++i) {
-            data.vertices.push_back(p[i]);
-            data.normals.push_back(normal[i]);
-        }
-    };
-    push_vertex(t.p1());
-    push_vertex(t.p2());
-    push_vertex(t.p3());
-    return data;
-}
-//------------------------------------------------------------------------------
-// END triangle.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start line.cpp
-//------------------------------------------------------------------------------
-
-using LineGeometry = givr::geometry::LineGeometry;
-LineGeometry::Data givr::geometry::generateGeometry(LineGeometry const &l) {
-    LineGeometry::Data data;
-    data.vertices.reserve(6);
-    auto push_vertex = [&](vec3f const &p) {
-        for(std::size_t i = 0; i < 3; ++i) {
-            data.vertices.push_back(p[i]);
-        }
-    };
-    push_vertex(l.p1());
-    push_vertex(l.p2());
-    return data;
-}
-//------------------------------------------------------------------------------
-// END line.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start triangle_soup.cpp
-//------------------------------------------------------------------------------
-
-using TriangleSoupGeometry = givr::geometry::TriangleSoupGeometry;
-using namespace givr::geometry;
-
-TriangleSoupGeometry::Data givr::geometry::generateGeometry(TriangleSoupGeometry const &t) {
-    typename TriangleSoupGeometry::Data data;
-    data.vertices.reserve(9 * t.triangles().size());
-    auto push_vertex = [&](std::vector<float> &v, vec3f const &p) {
-        for(std::size_t i = 0; i < 3; ++i) {
-            v.push_back(p[i]);
-        }
-    };
-    for(const auto &tri : t.triangles()) {
-        auto normal = glm::normalize(glm::cross(tri.p2()-tri.p1(), tri.p3()-tri.p1()));
-
-        push_vertex(data.vertices, tri.value<Point1>());
-        push_vertex(data.normals, normal);
-        push_vertex(data.vertices, tri.value<Point2>());
-        push_vertex(data.normals, normal);
-        push_vertex(data.vertices, tri.value<Point3>());
-        push_vertex(data.normals, normal);
-    }
-    return data;
-}
-//------------------------------------------------------------------------------
-// END triangle_soup.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start multiline.cpp
-//------------------------------------------------------------------------------
-
-using MultiLineGeometry = givr::geometry::MultiLineGeometry;
-using LineGeometry = givr::geometry::LineGeometry;
-
-void MultiLineGeometry::push_back(LineGeometry l) {
-    m_segments.push_back(l);
-}
-
-MultiLineGeometry::Data givr::geometry::generateGeometry(MultiLineGeometry const &l) {
-    MultiLineGeometry::Data data;
-    auto const &segments = l.segments();
-    data.vertices.reserve(6 * segments.size());
-    auto push_vertex = [&](vec3f const &p) {
-        for(std::size_t i = 0; i < 3; ++i) {
-            data.vertices.push_back(p[i]);
-        }
-    };
-    for(const auto &segment : segments) {
-        push_vertex(segment.p1());
-        push_vertex(segment.p2());
-    }
-    return data;
-}
-//------------------------------------------------------------------------------
-// END multiline.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 // Start cylinder.cpp
 //------------------------------------------------------------------------------
 
@@ -941,6 +903,133 @@ CylinderGeometry::Data givr::geometry::generateGeometry(CylinderGeometry const &
 }
 //------------------------------------------------------------------------------
 // END cylinder.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start sphere.cpp
+//------------------------------------------------------------------------------
+
+#include <cassert>
+#include <cmath>
+
+using SphereGeometry = givr::geometry::SphereGeometry;
+
+SphereGeometry::Data givr::geometry::generateGeometry(SphereGeometry const &s) {
+    SphereGeometry::Data data;
+
+    // TODO: should make this reserve the space necessary for the sphere.
+
+    struct point { float v[3]; };
+    //Azimuth: 0 to 2pi, Altitude: 0 to pi
+    auto sphereFunc = [](float azi, float alt) {
+        return point{ std::cos(azi)*std::sin(alt), std::cos(alt), std::sin(azi)*std::sin(alt) };
+    };
+    auto azimuthPoints = s.value<AzimuthPoints>().value();
+    auto altitudePoints = s.value<AltitudePoints>().value();
+    auto centroid = s.value<Centroid>().value();
+    auto radius = s.value<Radius>().value();
+
+    for (size_t azi = 0; azi < azimuthPoints; azi++) {
+        for (size_t alt = 0; alt < altitudePoints; alt++) {
+            if (azi < azimuthPoints - 1 && alt < altitudePoints - 1) {
+                data.indices.push_back((alt + 1) + (azi + 1)* altitudePoints);
+                data.indices.push_back((alt + 1) + azi * altitudePoints);
+                data.indices.push_back(alt + azi * altitudePoints);
+
+                data.indices.push_back(alt + (azi + 1)*altitudePoints);
+                data.indices.push_back((alt + 1) + (azi + 1)*altitudePoints);
+                data.indices.push_back(alt + azi * altitudePoints);
+            }
+            else if(alt < altitudePoints - 1){
+                data.indices.push_back((alt + 1));
+                data.indices.push_back((alt + 1) + azi * altitudePoints);
+                data.indices.push_back(alt + azi * altitudePoints);
+
+                data.indices.push_back(alt);
+                data.indices.push_back((alt + 1));
+                data.indices.push_back(alt + azi * altitudePoints);
+            }
+            float u = float(azi) / float(azimuthPoints - 1);
+            float v = float(alt) / float(altitudePoints - 1);
+            //Make uniform distribution
+            v = acos(1 - 2.f*v) / M_PI;     //DELETE THIS IF SPHERES LOOK BAD
+
+            point spherePoint = sphereFunc(2.f*M_PI*u, M_PI*v);
+            data.vertices.push_back((radius * spherePoint.v[0]) + centroid[0]);
+            data.vertices.push_back((radius * spherePoint.v[1]) + centroid[1]);
+            data.vertices.push_back((radius * spherePoint.v[2]) + centroid[2]);
+
+            data.normals.push_back(spherePoint.v[0]);
+            data.normals.push_back(spherePoint.v[1]);
+            data.normals.push_back(spherePoint.v[2]);
+
+            data.uvs.push_back(u);
+            data.uvs.push_back(v);
+        }
+    }
+
+    assert(data.vertices.size() == data.normals.size());
+
+    return data;
+}
+//------------------------------------------------------------------------------
+// END sphere.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start multiline.cpp
+//------------------------------------------------------------------------------
+
+using MultiLineGeometry = givr::geometry::MultiLineGeometry;
+using LineGeometry = givr::geometry::LineGeometry;
+
+void MultiLineGeometry::push_back(LineGeometry l) {
+    m_segments.push_back(l);
+}
+
+MultiLineGeometry::Data givr::geometry::generateGeometry(MultiLineGeometry const &l) {
+    MultiLineGeometry::Data data;
+    auto const &segments = l.segments();
+    data.vertices.reserve(6 * segments.size());
+    auto push_vertex = [&](vec3f const &p) {
+        for(std::size_t i = 0; i < 3; ++i) {
+            data.vertices.push_back(p[i]);
+        }
+    };
+    for(const auto &segment : segments) {
+        push_vertex(segment.p1());
+        push_vertex(segment.p2());
+    }
+    return data;
+}
+//------------------------------------------------------------------------------
+// END multiline.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start triangle.cpp
+//------------------------------------------------------------------------------
+
+using TriangleGeometry = givr::geometry::TriangleGeometry;
+
+TriangleGeometry::Data givr::geometry::generateGeometry(TriangleGeometry const &t) {
+    TriangleGeometry::Data data;
+    vec3f normal = glm::normalize(glm::cross(t.p2()-t.p1(), t.p3()-t.p1()));
+    data.normals.reserve(9);
+    data.vertices.reserve(9);
+    auto push_vertex = [&](vec3f const &p) {
+        for(std::size_t i = 0; i < 3; ++i) {
+            data.vertices.push_back(p[i]);
+            data.normals.push_back(normal[i]);
+        }
+    };
+    push_vertex(t.p1());
+    push_vertex(t.p2());
+    push_vertex(t.p3());
+    return data;
+}
+//------------------------------------------------------------------------------
+// END triangle.cpp
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -1139,6 +1228,37 @@ namespace geometry {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+// Start triangle_soup.cpp
+//------------------------------------------------------------------------------
+
+using TriangleSoupGeometry = givr::geometry::TriangleSoupGeometry;
+using namespace givr::geometry;
+
+TriangleSoupGeometry::Data givr::geometry::generateGeometry(TriangleSoupGeometry const &t) {
+    typename TriangleSoupGeometry::Data data;
+    data.vertices.reserve(9 * t.triangles().size());
+    auto push_vertex = [&](std::vector<float> &v, vec3f const &p) {
+        for(std::size_t i = 0; i < 3; ++i) {
+            v.push_back(p[i]);
+        }
+    };
+    for(const auto &tri : t.triangles()) {
+        auto normal = glm::normalize(glm::cross(tri.p2()-tri.p1(), tri.p3()-tri.p1()));
+
+        push_vertex(data.vertices, tri.value<Point1>());
+        push_vertex(data.normals, normal);
+        push_vertex(data.vertices, tri.value<Point2>());
+        push_vertex(data.normals, normal);
+        push_vertex(data.vertices, tri.value<Point3>());
+        push_vertex(data.normals, normal);
+    }
+    return data;
+}
+//------------------------------------------------------------------------------
+// END triangle_soup.cpp
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 // Start quad.cpp
 //------------------------------------------------------------------------------
 
@@ -1185,181 +1305,24 @@ QuadGeometry::Data givr::geometry::generateGeometry(QuadGeometry const &t) {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start vertex_array.cpp
-//------------------------------------------------------------------------------
-#include <cassert>
-
-using VertexArray = givr::VertexArray;
-
-VertexArray::VertexArray(
-) : m_vertexArrayID{}
-{
-    alloc();
-}
-
-void VertexArray::alloc() {
-    dealloc();
-    glGenVertexArrays(1, &m_vertexArrayID);
-}
-
-void VertexArray::dealloc() {
-    if (m_vertexArrayID) {
-        glDeleteVertexArrays(1, &m_vertexArrayID);
-        m_vertexArrayID = 0;
-    }
-}
-
-void VertexArray::bind() {
-    glBindVertexArray(m_vertexArrayID);
-}
-void VertexArray::unbind() {
-    glBindVertexArray(0);
-}
-
-VertexArray::~VertexArray() {
-    dealloc();
-}
-//------------------------------------------------------------------------------
-// END vertex_array.cpp
+// Start line.cpp
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-// Start shader.cpp
-//------------------------------------------------------------------------------
-
-using Shader = givr::Shader;
-
-Shader::Shader(
-    const std::string &source,
-    GLenum shaderType
-) : m_shaderID{glCreateShader(shaderType)}
-{
-    const GLchar *source_char = source.c_str();
-    glShaderSource(m_shaderID, 1, &source_char, NULL);
-    glCompileShader(m_shaderID);
-    GLint success;
-    glGetShaderiv(m_shaderID, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(m_shaderID, 512, NULL, infoLog);
-        std::ostringstream out;
-        out << "Unable to compile Shader " << infoLog;
-        // TODO(lw): Consider a better exception here
-        throw std::runtime_error(out.str());
-    }
-}
-
-Shader::~Shader() {
-    glDeleteShader(m_shaderID);
+using LineGeometry = givr::geometry::LineGeometry;
+LineGeometry::Data givr::geometry::generateGeometry(LineGeometry const &l) {
+    LineGeometry::Data data;
+    data.vertices.reserve(6);
+    auto push_vertex = [&](vec3f const &p) {
+        for(std::size_t i = 0; i < 3; ++i) {
+            data.vertices.push_back(p[i]);
+        }
+    };
+    push_vertex(l.p1());
+    push_vertex(l.p2());
+    return data;
 }
 //------------------------------------------------------------------------------
-// END shader.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start texture.cpp
-//------------------------------------------------------------------------------
-#include <cassert>
-#define STB_IMAGE_IMPLEMENTATION
-
-
-using Texture = givr::Texture;
-
-Texture::Texture(
-) : m_textureID{0}
-{
-    alloc();
-}
-// TODO(lw): make a version that just receives the source directly.
-Texture::~Texture() {
-    dealloc();
-}
-
-void Texture::alloc()
-{
-    dealloc();
-    glGenTextures(1, &m_textureID);
-}
-void Texture::dealloc()
-{
-    if (m_textureID) {
-        //Temporarily disabled until better way to manage IDs is decided on
-        //glDeleteBuffers(1, &m_textureID);
-    }
-}
-
-void Texture::bind(GLenum target)
-{
-    glBindTexture(target, m_textureID);
-}
-
-void Texture::load(GLenum target, std::string filename, GLint level)
-{
-    int width, height, comp;
-    unsigned char *image = stbi_load(filename.c_str(),
-        &width, &height, &comp, 0);
-
-    if ((image == nullptr) || (comp > 4)) {
-        throw std::runtime_error("Failed to load texture");
-    } else {
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        const GLenum formats[4] = { GL_RED, GL_RG, GL_RGB, GL_RGBA };
-
-        glActiveTexture(GL_TEXTURE0);    //Bind to avoid disturbing active units
-        glBindTexture(target, m_textureID);
-        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        glTexImage2D(target, level, formats[comp - 1], width,
-            height, 0, formats[comp - 1], GL_UNSIGNED_BYTE, image);
-
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);        //Return to default
-    }
-
-    stbi_image_free(image);
-
-}
-//------------------------------------------------------------------------------
-// END texture.cpp
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start buffer.cpp
-//------------------------------------------------------------------------------
-#include <cassert>
-
-using Buffer = givr::Buffer;
-
-Buffer::Buffer(
-) : m_bufferID{0}
-{
-    alloc();
-}
-
-void Buffer::alloc() {
-    dealloc();
-    glGenBuffers(1, &m_bufferID);
-}
-void Buffer::dealloc() {
-    if (m_bufferID) {
-        glDeleteBuffers(1, &m_bufferID);
-    }
-}
-
-void Buffer::bind(GLenum target) {
-    glBindBuffer(target, m_bufferID);
-}
-void Buffer::unbind(GLenum target) {
-    glBindBuffer(target, 0);
-}
-
-Buffer::~Buffer() {
-    dealloc();
-}
-//------------------------------------------------------------------------------
-// END buffer.cpp
+// END line.cpp
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -1482,143 +1445,180 @@ void Program::setMat3(const std::string &name, const glm::mat3 &mat) const
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start orthographic.cpp
+// Start shader.cpp
 //------------------------------------------------------------------------------
 
-#include <glm/gtc/matrix_transform.hpp>
+using Shader = givr::Shader;
 
-using OrthographicProjection = givr::camera::OrthographicProjection;
-using mat4f = givr::mat4f;
-
-mat4f OrthographicProjection::projectionMatrix() const {
-    // TODO: This assumes a view centred on the origin
-    auto ar = aspectRatio();
-    if (ar < 1) {
-        // taller than we are wide
-        return glm::ortho(
-            left(),
-            right(),
-            bottom() / ar,
-            top() / ar,
-            nearDistance(),
-            farDistance()
-        );
-    } else {
-        // Wider than we are tall
-        return glm::ortho(
-            left() * ar,
-            right() * ar,
-            bottom(),
-            top(),
-            nearDistance(),
-            farDistance()
-        );
+Shader::Shader(
+    const std::string &source,
+    GLenum shaderType
+) : m_shaderID{glCreateShader(shaderType)}
+{
+    const GLchar *source_char = source.c_str();
+    glShaderSource(m_shaderID, 1, &source_char, NULL);
+    glCompileShader(m_shaderID);
+    GLint success;
+    glGetShaderiv(m_shaderID, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(m_shaderID, 512, NULL, infoLog);
+        std::ostringstream out;
+        out << "Unable to compile Shader " << infoLog;
+        // TODO(lw): Consider a better exception here
+        throw std::runtime_error(out.str());
     }
 }
-void OrthographicProjection::updateAspectRatio(int width, int height) {
-    float w = static_cast<float>(width);
-    float h = static_cast<float>(height);
 
-    set(AspectRatio(w / h));
+Shader::~Shader() {
+    glDeleteShader(m_shaderID);
 }
 //------------------------------------------------------------------------------
-// END orthographic.cpp
+// END shader.cpp
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start perspective.cpp
+// Start texture.cpp
+//------------------------------------------------------------------------------
+#include <cassert>
+#define STB_IMAGE_IMPLEMENTATION
+
+
+using Texture = givr::Texture;
+
+Texture::Texture(
+) : m_textureID{0}
+{
+    alloc();
+}
+// TODO(lw): make a version that just receives the source directly.
+Texture::~Texture() {
+    dealloc();
+}
+
+void Texture::alloc()
+{
+    dealloc();
+    glGenTextures(1, &m_textureID);
+}
+void Texture::dealloc()
+{
+    if (m_textureID) {
+        //Temporarily disabled until better way to manage IDs is decided on
+        //glDeleteBuffers(1, &m_textureID);
+    }
+}
+
+void Texture::bind(GLenum target)
+{
+    glBindTexture(target, m_textureID);
+}
+
+void Texture::load(GLenum target, std::string filename, GLint level)
+{
+    int width, height, comp;
+    unsigned char *image = stbi_load(filename.c_str(),
+        &width, &height, &comp, 0);
+
+    if ((image == nullptr) || (comp > 4)) {
+        throw std::runtime_error("Failed to load texture");
+    } else {
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        const GLenum formats[4] = { GL_RED, GL_RG, GL_RGB, GL_RGBA };
+
+        glActiveTexture(GL_TEXTURE0);    //Bind to avoid disturbing active units
+        glBindTexture(target, m_textureID);
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glTexImage2D(target, level, formats[comp - 1], width,
+            height, 0, formats[comp - 1], GL_UNSIGNED_BYTE, image);
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);        //Return to default
+    }
+
+    stbi_image_free(image);
+
+}
+//------------------------------------------------------------------------------
+// END texture.cpp
 //------------------------------------------------------------------------------
 
-#include <glm/gtc/matrix_transform.hpp>
+//------------------------------------------------------------------------------
+// Start vertex_array.cpp
+//------------------------------------------------------------------------------
+#include <cassert>
 
-using PerspectiveProjection = givr::camera::PerspectiveProjection;
+using VertexArray = givr::VertexArray;
 
-givr::mat4f PerspectiveProjection::projectionMatrix() const {
-    return glm::perspective(
-        glm::radians(fieldOfViewY()),
-        aspectRatio(),
-        nearDistance(),
-        farDistance()
-    );
+VertexArray::VertexArray(
+) : m_vertexArrayID{}
+{
+    alloc();
 }
 
-void PerspectiveProjection::updateAspectRatio(int width, int height) {
-    float w = static_cast<float>(width);
-    float h = static_cast<float>(height);
+void VertexArray::alloc() {
+    dealloc();
+    glGenVertexArrays(1, &m_vertexArrayID);
+}
 
-    set(AspectRatio(w / h));
+void VertexArray::dealloc() {
+    if (m_vertexArrayID) {
+        glDeleteVertexArrays(1, &m_vertexArrayID);
+        m_vertexArrayID = 0;
+    }
+}
+
+void VertexArray::bind() {
+    glBindVertexArray(m_vertexArrayID);
+}
+void VertexArray::unbind() {
+    glBindVertexArray(0);
+}
+
+VertexArray::~VertexArray() {
+    dealloc();
 }
 //------------------------------------------------------------------------------
-// END perspective.cpp
+// END vertex_array.cpp
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start turntable.cpp
+// Start buffer.cpp
 //------------------------------------------------------------------------------
+#include <cassert>
 
-#include <glm/gtc/matrix_transform.hpp>
+using Buffer = givr::Buffer;
 
-#include <cmath>
-#include <iostream>
-
-using mat4f = givr::mat4f;
-using vec3f = givr::vec3f;
-using TurnTableCamera = givr::camera::TurnTableCamera;
-
-float angle_to_x(float r, float theta, float phi) {
-    return r * sin(theta) * sin(phi);
-}
-float angle_to_y(float r, float phi) {
-    return r * cos(phi);
-}
-float angle_to_z(float r, float theta, float phi) {
-    return r * cos(theta) * sin(phi);
+Buffer::Buffer(
+) : m_bufferID{0}
+{
+    alloc();
 }
 
-
-mat4f TurnTableCamera::viewMatrix() const {
-    vec3f camera_position{
-        angle_to_x(zoom(), longitude(), latitude()),
-        angle_to_y(zoom(), latitude()),
-        angle_to_z(zoom(), longitude(), latitude())
-    };
-    camera_position += translation();
-    vec3f up{ 0., 1., 0. };
-    vec3f binormal = cross(camera_position, up);
-    up = glm::normalize(cross(binormal, camera_position));
-
-    return glm::lookAt(camera_position, translation(), up);
+void Buffer::alloc() {
+    dealloc();
+    glGenBuffers(1, &m_bufferID);
+}
+void Buffer::dealloc() {
+    if (m_bufferID) {
+        glDeleteBuffers(1, &m_bufferID);
+    }
 }
 
-vec3f TurnTableCamera::viewPosition() const {
-    return vec3f{
-        angle_to_x(zoom(), longitude(), latitude()),
-        angle_to_y(zoom(), latitude()),
-        angle_to_z(zoom(), longitude(), latitude()) };
+void Buffer::bind(GLenum target) {
+    glBindBuffer(target, m_bufferID);
+}
+void Buffer::unbind(GLenum target) {
+    glBindBuffer(target, 0);
 }
 
-void TurnTableCamera::rotateAroundXPercent(float perc) {
-    rotateAroundX(perc * LONGITUDE_MAX);
+Buffer::~Buffer() {
+    dealloc();
 }
-void TurnTableCamera::rotateAroundYPercent(float perc) {
-    rotateAroundY(perc * LATITUDE_MAX);
-}
-
-void TurnTableCamera::rotateAroundX(float angle) {
-    longitude() += angle;
-}
-void TurnTableCamera::rotateAroundY(float angle) {
-    latitude() = std::fmin(std::fmax(latitude() + angle, 0.001f), M_PI - 0.001f);
-}
-void TurnTableCamera::zoom(float amount) {
-    zoom() += amount;
-    zoom() = std::fmax(0, zoom());
-}
-void TurnTableCamera::translate(vec3f amount) {
-    translation() += amount;
-}
-
 //------------------------------------------------------------------------------
-// END turntable.cpp
+// END buffer.cpp
 //------------------------------------------------------------------------------
 
