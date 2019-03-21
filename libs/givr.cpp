@@ -46,7 +46,7 @@ namespace givr {
         ctx.startIndex = 0;
         ctx.endIndex =  data.vertices.size() / data.dimensions;
 
-        std::uint16_t vaIndex = 0;
+        std::uint16_t vaIndex = 4;
         ctx.vao->bind();
 
         std::unique_ptr<Buffer> &indices = ctx.arrayBuffers[0];
@@ -61,27 +61,29 @@ namespace givr {
             GLenum type,
             GLuint size,
             GLenum bufferType,
+            std::string name,
             std::vector<float> const &data
         ) {
-            // if this data piece is empty
-            if (data.size() == 0) {
-                ++bufferIndex;
-                return;
-            }
+            // if this data piece is empty disable this one.
             std::unique_ptr<Buffer> &vbo = ctx.arrayBuffers[bufferIndex];
             vbo->bind(type);
-            vbo->data(type, data, bufferType);
-            glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-            glEnableVertexAttribArray(vaIndex);
+            if (data.size() == 0) {
+                glDisableVertexAttribArray(vaIndex);
+            } else {
+                glBindAttribLocation(*ctx.shaderProgram.get(), vaIndex, name.c_str());
+                vbo->data(type, data, bufferType);
+                glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+                glEnableVertexAttribArray(vaIndex);
+            }
             ++vaIndex;
             ++bufferIndex;
         };
 
         // Upload / bind / map model data
-        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), data.vertices);
-        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), data.normals);
-        applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), data.uvs);
-        applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), data.colours);
+        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), "position", data.vertices);
+        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), "normals", data.normals);
+        applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), "uvs", data.uvs);
+        applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), "colour", data.colours);
 
         ctx.vao->unbind();
 
@@ -302,26 +304,28 @@ namespace givr {
             GLenum type,
             GLuint size,
             GLenum bufferType,
+            std::string name,
             std::vector<float> const &data
         ) {
-            if (data.size() == 0) {
-                ++bufferIndex;
-                return;
-            }
             std::unique_ptr<Buffer> &vbo = ctx.arrayBuffers[bufferIndex];
             vbo->bind(type);
-            vbo->data(type, data, bufferType);
-            glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-            glEnableVertexAttribArray(vaIndex);
+            if (data.size() == 0) {
+                glDisableVertexAttribArray(vaIndex);
+            } else {
+                vbo->data(type, data, bufferType);
+                glBindAttribLocation(*ctx.shaderProgram.get(), vaIndex, name.c_str());
+                glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+                glEnableVertexAttribArray(vaIndex);
+            }
             ++vaIndex;
             ++bufferIndex;
         };
 
         // Upload / bind / map model data
-        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), data.vertices);
-        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), data.normals);
-        applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), data.uvs);
-        applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), data.colours);
+        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), "position", data.vertices);
+        applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), "normals", data.normals);
+        applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), "uvs", data.uvs);
+        applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), "colour", data.colours);
 
         ctx.vao->unbind();
 
@@ -480,7 +484,6 @@ void OrthographicProjection::updateAspectRatio(int width, int height) {
 //------------------------------------------------------------------------------
 // Start phong.cpp
 //------------------------------------------------------------------------------
-#include <iostream>
 
 template<typename ColorSrc>
 using prc = givr::style::T_PhongRenderContext<ColorSrc>;
@@ -488,21 +491,24 @@ template<typename ColorSrc>
 using pirc = givr::style::T_PhongInstancedRenderContext<ColorSrc>;
 using namespace givr::style;
 
-std::string givr::style::phongVertexSource(std::string modelSource, bool usingTexture, bool hasNormals) {
+std::string givr::style::phongVertexSource(std::string modelSource, bool usingTexture, bool hasNormals, bool hasColours) {
     return
         "#version 330 core\n" +
         std::string(usingTexture ? "#define USING_TEXTURE\n" : "") +
         std::string(hasNormals ? "#define HAS_NORMALS\n" : "") +
+        std::string(hasColours ? "#define HAS_COLOURS\n" : "") +
         modelSource +
         std::string(R"shader( mat4 model;
-        in vec3 position;
+        layout(location=4) in vec3 position;
         #ifdef HAS_NORMALS
-            in vec3 normal;
+            layout(location=5) in vec3 normal;
         #endif
         #ifdef USING_TEXTURE
-            in vec2 uvs;
+            layout(location=6) in vec2 uvs;
         #endif
-        in vec3 colour;
+        #ifdef HAS_COLOURS
+            layout(location=7) in vec3 colour;
+        #endif
 
         uniform mat4 view;
         uniform mat4 projection;
@@ -514,7 +520,9 @@ std::string givr::style::phongVertexSource(std::string modelSource, bool usingTe
         #ifdef USING_TEXTURE
             out vec2 geomUv;
         #endif
-        out vec3 geomColour;
+        #ifdef HAS_COLOURS
+            out vec3 geomColour;
+        #endif
 
         void main(){
             mat4 mv = view * model;
@@ -524,7 +532,9 @@ std::string givr::style::phongVertexSource(std::string modelSource, bool usingTe
             #ifdef HAS_NORMALS
                 geomNormal = vec3(model*vec4(normal, 0));
             #endif
-            geomColour = colour;
+            #ifdef HAS_COLOURS
+                geomColour = colour;
+            #endif
             #ifdef USING_TEXTURE
                 geomUv = uvs;
             #endif
@@ -533,11 +543,12 @@ std::string givr::style::phongVertexSource(std::string modelSource, bool usingTe
         )shader"
     );
 }
-std::string givr::style::phongGeometrySource(bool usingTexture, bool hasNormals) {
+std::string givr::style::phongGeometrySource(bool usingTexture, bool hasNormals, bool hasColours) {
     return
         "#version 330 core\n" +
         std::string(usingTexture ? "#define USING_TEXTURE\n" : "") +
         std::string(hasNormals ? "#define HAS_NORMALS\n" : "") +
+        std::string(hasColours ? "#define HAS_COLOURS\n" : "") +
         std::string(R"shader(
         layout (triangles) in;
         layout (triangle_strip, max_vertices = 3) out;
@@ -551,12 +562,16 @@ std::string givr::style::phongGeometrySource(bool usingTexture, bool hasNormals)
         #ifdef USING_TEXTURE
             in vec2 geomUv[];
         #endif
-        in vec3 geomColour[];
+        #ifdef HAS_COLOURS
+            in vec3 geomColour[];
+        #endif
 
         out vec3 fragNormal;
         out vec3 originalPosition;
         out vec2 fragUv;
-        out vec3 fragColour;
+        #ifdef HAS_COLOURS
+            out vec3 fragColour;
+        #endif
         out vec3 fragBarycentricCoords;
 
         void main() {
@@ -582,7 +597,9 @@ std::string givr::style::phongGeometrySource(bool usingTexture, bool hasNormals)
                 #ifdef USING_TEXTURE
                     fragUv = geomUv[i];
                 #endif
-                fragColour = geomColour[i];
+                #ifdef HAS_COLOURS
+                    fragColour = geomColour[i];
+                #endif
                 fragBarycentricCoords = vec3(0.0, 0.0, 0.0);
                 fragBarycentricCoords[i] = 1.0;
                 EmitVertex();
@@ -597,10 +614,11 @@ std::string givr::style::phongGeometrySource(bool usingTexture, bool hasNormals)
 
 // Using wireframe technique from:
 // http://codeflow.org/entries/2012/aug/02/easy-wireframe-display-with-barycentric-coordinates/
-std::string givr::style::phongFragmentSource(bool usingTexture) {
+std::string givr::style::phongFragmentSource(bool usingTexture, bool hasColours) {
     return
         "#version 330 core\n" +
         std::string(usingTexture ? "#define USING_TEXTURE\n" : "") +
+        std::string(hasColours ? "#define HAS_COLOURS\n" : "") +
         std::string(R"shader(
         #define M_PI 3.1415926535897932384626433832795
 
@@ -633,7 +651,9 @@ std::string givr::style::phongFragmentSource(bool usingTexture) {
 
         in vec3 fragNormal;
         in vec3 originalPosition;
-        in vec3 fragColour;
+        #ifdef HAS_COLOURS
+            in vec3 fragColour;
+        #endif
         in vec3 fragBarycentricCoords;
 
         out vec4 outColour;
@@ -641,9 +661,11 @@ std::string givr::style::phongFragmentSource(bool usingTexture) {
         void main()
         {
             vec3 finalColour = getColor();
-            if (perVertexColour) {
-                finalColour = fragColour;
-            }
+            #ifdef HAS_COLOURS
+                if (perVertexColour) {
+                    finalColour = fragColour;
+                }
+            #endif
 
             // ambient
             vec3 ambient = ambientFactor * finalColour;
@@ -699,7 +721,7 @@ void lirc::setUniforms(std::unique_ptr<givr::Program> const &p) const {
 
 std::string linesVertexSource(std::string modelSource) {
     return "#version 330 core\n" + modelSource + std::string(R"shader( mat4 model;
-        in vec3 position;
+        layout(location=4) in vec3 position;
 
         uniform mat4 view;
         uniform mat4 projection;
@@ -747,7 +769,7 @@ std::string lrc::getFragmentShaderSource() const {
 }
 
 std::string lirc::getVertexShaderSource() const {
-    return linesVertexSource("in");
+    return linesVertexSource("layout(location=0) in");
 }
 
 std::string lirc::getFragmentShaderSource() const {
@@ -779,7 +801,7 @@ void nsirc::setUniforms(std::unique_ptr<givr::Program> const &p) const {
 
 std::string noShadingVertexSource(std::string modelSource) {
     return "#version 330 core\n" + modelSource + std::string(R"shader( mat4 model;
-        in vec3 position;
+        layout(location=4) in vec3 position;
 
         uniform mat4 view;
         uniform mat4 projection;
@@ -816,7 +838,7 @@ std::string nsrc::getFragmentShaderSource() const {
     return noShadingFragmentSource();
 }
 std::string nsirc::getVertexShaderSource() const {
-    return noShadingVertexSource("in");
+    return noShadingVertexSource("layout(location=0) in");
 }
 std::string nsirc::getFragmentShaderSource() const {
     return noShadingFragmentSource();
