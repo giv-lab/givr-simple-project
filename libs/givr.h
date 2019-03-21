@@ -1,27 +1,3 @@
-//------------------------------------------------------------------------------
-// Copyright 2019 Lakin Wecker, Jeremy Hart, Andrew Owens and Others (see AUTHORS)
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation the
-// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-// sell copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//------------------------------------------------------------------------------
-
-
-
 #pragma once
 //------------------------------------------------------------------------------
 // Start utility.h
@@ -11815,8 +11791,8 @@ namespace givr {
         };
 
 
-        std::string phongVertexSource(std::string modelSource, bool usingTexture);
-        std::string phongGeometrySource();
+        std::string phongVertexSource(std::string modelSource, bool usingTexture, bool hasNormals);
+        std::string phongGeometrySource(bool usingTexture, bool hasNormals);
         std::string phongFragmentSource(bool usingTexture);
 
         template <typename RenderContextT>
@@ -11868,11 +11844,18 @@ namespace givr {
                     setPhongUniforms(*this, p);
             }
 
-            std::string getVertexShaderSource() const {
-                return phongVertexSource("in", std::is_same<ColorSrc, ColorTexture>::value);
+            std::string getVertexShaderSource(bool hasNormals) const {
+                return phongVertexSource(
+                        "in",
+                        std::is_same<ColorSrc, ColorTexture>::value,
+                        hasNormals
+                    );
             }
-            std::string getGeometryShaderSource() const {
-                return phongGeometrySource();
+            std::string getGeometryShaderSource(bool hasNormals) const {
+                return phongGeometrySource(
+                        std::is_same<ColorSrc, ColorTexture>::value,
+                        hasNormals
+                    );
             }
             std::string getFragmentShaderSource() const {
                 return phongFragmentSource(std::is_same<ColorSrc, ColorTexture>::value);
@@ -11887,17 +11870,24 @@ namespace givr {
         {
             void setUniforms(std::unique_ptr<Program> const &p) const {
                 if constexpr (std::is_same<ColorSrc, ColorTexture>::value)
-                    setTexturePhongUniforms(*this, p);
+                    setTexturedPhongUniforms(*this, p);
                 else
                     setPhongUniforms(*this, p);
 
             }
 
-            std::string getVertexShaderSource() const {
-                return phongVertexSource("uniform", std::is_same<ColorSrc, ColorTexture>::value);
+            std::string getVertexShaderSource(bool hasNormals) const {
+                return phongVertexSource(
+                        "uniform",
+                        std::is_same<ColorSrc, ColorTexture>::value,
+                        hasNormals
+                    );
             }
-            std::string getGeometryShaderSource() const {
-                return phongGeometrySource();
+            std::string getGeometryShaderSource(bool hasNormals) const {
+                return phongGeometrySource(
+                        std::is_same<ColorSrc, ColorTexture>::value,
+                        hasNormals
+                    );
             }
             std::string getFragmentShaderSource() const {
                 return phongFragmentSource(std::is_same<ColorSrc, ColorTexture>::value);
@@ -11989,10 +11979,11 @@ namespace givr {
         template <typename RenderContextT, typename GeometryT, typename ColorSrc>
         RenderContextT getContext(GeometryT &, T_PhongStyle<ColorSrc> const &p) {
             RenderContextT ctx;
+            constexpr bool _hasNormals = hasNormals<GeometryT>::value;
             // TODO: this probably belongs in the constructor
             ctx.shaderProgram = std::make_unique<Program>(
-                Shader{ ctx.getVertexShaderSource(), GL_VERTEX_SHADER },
-                Shader{ ctx.getGeometryShaderSource(), GL_GEOMETRY_SHADER },
+                Shader{ ctx.getVertexShaderSource(_hasNormals), GL_VERTEX_SHADER },
+                Shader{ ctx.getGeometryShaderSource(_hasNormals), GL_GEOMETRY_SHADER },
                 Shader{ ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER }
             );
             ctx.primitive = getPrimitive<GeometryT>();

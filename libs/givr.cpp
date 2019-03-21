@@ -1,27 +1,3 @@
-//------------------------------------------------------------------------------
-// Copyright 2019 Lakin Wecker, Jeremy Hart, Andrew Owens and Others (see AUTHORS)
-// 
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the "Software"),
-// to deal in the Software without restriction, including without limitation the
-// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-// sell copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-// 
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-// 
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-//------------------------------------------------------------------------------
-
-
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include "givr.h"
@@ -504,6 +480,7 @@ void OrthographicProjection::updateAspectRatio(int width, int height) {
 //------------------------------------------------------------------------------
 // Start phong.cpp
 //------------------------------------------------------------------------------
+#include <iostream>
 
 template<typename ColorSrc>
 using prc = givr::style::T_PhongRenderContext<ColorSrc>;
@@ -511,14 +488,17 @@ template<typename ColorSrc>
 using pirc = givr::style::T_PhongInstancedRenderContext<ColorSrc>;
 using namespace givr::style;
 
-std::string givr::style::phongVertexSource(std::string modelSource, bool usingTexture) {
+std::string givr::style::phongVertexSource(std::string modelSource, bool usingTexture, bool hasNormals) {
     return
         "#version 330 core\n" +
         std::string(usingTexture ? "#define USING_TEXTURE\n" : "") +
+        std::string(hasNormals ? "#define HAS_NORMALS\n" : "") +
         modelSource +
         std::string(R"shader( mat4 model;
         in vec3 position;
-        in vec3 normal;
+        #ifdef HAS_NORMALS
+            in vec3 normal;
+        #endif
         #ifdef USING_TEXTURE
             in vec2 uvs;
         #endif
@@ -527,9 +507,10 @@ std::string givr::style::phongVertexSource(std::string modelSource, bool usingTe
         uniform mat4 view;
         uniform mat4 projection;
 
-        out vec3 geomNormal;
+        #ifdef HAS_NORMALS
+            out vec3 geomNormal;
+        #endif
         out vec3 geomOriginalPosition;
-        out vec2 geomUv;
         #ifdef USING_TEXTURE
             out vec2 geomUv;
         #endif
@@ -540,7 +521,9 @@ std::string givr::style::phongVertexSource(std::string modelSource, bool usingTe
             mat4 mvp = projection * mv;
             gl_Position = mvp * vec4(position, 1.0);
             geomOriginalPosition = vec3(model * vec4(position, 1.0));
-            geomNormal = vec3(model*vec4(normal, 0));
+            #ifdef HAS_NORMALS
+                geomNormal = vec3(model*vec4(normal, 0));
+            #endif
             geomColour = colour;
             #ifdef USING_TEXTURE
                 geomUv = uvs;
@@ -550,17 +533,24 @@ std::string givr::style::phongVertexSource(std::string modelSource, bool usingTe
         )shader"
     );
 }
-std::string givr::style::phongGeometrySource() {
-    return std::string(R"shader(
-        #version 330 core
+std::string givr::style::phongGeometrySource(bool usingTexture, bool hasNormals) {
+    return
+        "#version 330 core\n" +
+        std::string(usingTexture ? "#define USING_TEXTURE\n" : "") +
+        std::string(hasNormals ? "#define HAS_NORMALS\n" : "") +
+        std::string(R"shader(
         layout (triangles) in;
         layout (triangle_strip, max_vertices = 3) out;
 
         uniform bool generateNormals;
 
-        in vec3 geomNormal[];
+        #ifdef HAS_NORMALS
+            in vec3 geomNormal[];
+        #endif
         in vec3 geomOriginalPosition[];
-        in vec2 geomUv[];
+        #ifdef USING_TEXTURE
+            in vec2 geomUv[];
+        #endif
         in vec3 geomColour[];
 
         out vec3 fragNormal;
@@ -579,42 +569,24 @@ std::string givr::style::phongGeometrySource() {
                     );
             }
 
-
-            gl_Position = gl_in[0].gl_Position;
-            if (!generateNormals) {
-                fragNormal = geomNormal[0];
-            } else {
-                fragNormal = normal;
+            for(int i = 0; i < 3; i++) {
+                gl_Position = gl_in[i].gl_Position;
+                if (!generateNormals) {
+                    #ifdef HAS_NORMALS
+                        fragNormal = geomNormal[i];
+                    #endif
+                } else {
+                    fragNormal = normal;
+                }
+                originalPosition = geomOriginalPosition[i];
+                #ifdef USING_TEXTURE
+                    fragUv = geomUv[i];
+                #endif
+                fragColour = geomColour[i];
+                fragBarycentricCoords = vec3(0.0, 0.0, 0.0);
+                fragBarycentricCoords[i] = 1.0;
+                EmitVertex();
             }
-            originalPosition = geomOriginalPosition[0];
-            fragUv = geomUv[0];
-            fragColour = geomColour[0];
-            fragBarycentricCoords = vec3(1.0, 0.0, 0.0);
-            EmitVertex();
-
-            gl_Position = gl_in[1].gl_Position;
-            if (!generateNormals) {
-                fragNormal = geomNormal[1];
-            } else {
-                fragNormal = normal;
-            }
-            originalPosition = geomOriginalPosition[1];
-            fragUv = geomUv[1];
-            fragColour = geomColour[1];
-            fragBarycentricCoords = vec3(0.0, 1.0, 0.0);
-            EmitVertex();
-
-            gl_Position = gl_in[2].gl_Position;
-            if (!generateNormals) {
-                fragNormal = geomNormal[2];
-            } else {
-                fragNormal = normal;
-            }
-            originalPosition = geomOriginalPosition[2];
-            fragUv = geomUv[2];
-            fragColour = geomColour[2];
-            fragBarycentricCoords = vec3(0.0, 0.0, 1.0);
-            EmitVertex();
 
             EndPrimitive();
         }
@@ -1295,7 +1267,7 @@ using QuadGeometry = givr::geometry::QuadGeometry;
 QuadGeometry::Data givr::geometry::generateGeometry(QuadGeometry const &t) {
     QuadGeometry::Data data;
     vec3f normal1 = glm::normalize(glm::cross(t.p3()-t.p2(), t.p1()-t.p2()));
-    vec3f normal2 = glm::normalize(glm::cross(t.p4()-t.p2(), t.p3()-t.p2()));
+    vec3f normal2 = glm::normalize(glm::cross(t.p4()-t.p3(), t.p1()-t.p3()));
     vec3f avg = glm::normalize(normal1 + normal2);
     data.uvs.reserve(8);
     data.normals.reserve(12);
@@ -1320,12 +1292,12 @@ QuadGeometry::Data givr::geometry::generateGeometry(QuadGeometry const &t) {
     push_vertex(t.p2(), avg);
     push_uvs(0.0, 1.0);
     push_vertex(t.p3(), avg);
-    push_uvs(1.0, 0.0);
-    push_vertex(t.p4(), normal2);
     push_uvs(1.0, 1.0);
+    push_vertex(t.p4(), normal2);
+    push_uvs(1.0, 0.0);
 
     add_tri(0, 1, 2);
-    add_tri(1, 3, 2);
+    add_tri(0, 2, 3);
     return data;
 }
 //------------------------------------------------------------------------------
