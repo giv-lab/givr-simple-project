@@ -10101,7 +10101,8 @@ namespace givr {
 
 #include <vector>
 #include <array>
-#include <iostream>
+#include <utility>
+#include <gsl/span>
 
 namespace givr {
 
@@ -10127,12 +10128,12 @@ namespace givr {
             void bind(GLenum target);
             void unbind(GLenum target);
             template <typename T>
-            void data(GLenum target, const std::vector<T> &data, GLenum usage) {
+            void data(GLenum target, const gsl::span<T> &data, GLenum usage) {
                 glBufferData(target, sizeof(T) * data.size(), data.data(), usage);
             }
-            template <typename T, long unsigned int Size>
-            void data(GLenum target, const std::array<T, Size> &data, GLenum usage) {
-                glBufferData(target, sizeof(T) * Size, data.data(), usage);
+            template <typename T>
+            void data(GLenum target, const std::vector<T> &data, GLenum usage) {
+                glBufferData(target, sizeof(T) * data.size(), data.data(), usage);
             }
 
         private:
@@ -10171,107 +10172,6 @@ namespace givr {
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Start buffer_data.h
-//------------------------------------------------------------------------------
-
-#include <vector>
-
-
-namespace givr {
-    struct BufferData {
-        // Holds the necessary vertex buffer data
-        // if the size is zero, then it is not used and will not be supplied to the shader
-        std::uint16_t dimensions = 3;
-
-        BufferUsageType indicesType;
-        std::vector<GLuint> indices;
-        BufferUsageType verticesType;
-        std::vector<float> vertices;
-        BufferUsageType normalsType;
-        std::vector<float> normals;
-        BufferUsageType uvsType;
-        std::vector<float> uvs;
-        BufferUsageType coloursType;
-        std::vector<float> colours;
-
-        void addIndices(std::vector<GLuint> const &newIndices);
-        void addVertices(std::vector<float> const &newVertices);
-        void addVertices(std::vector<vec3f> const &newVertices);
-        void addNormals(std::vector<float> const &newNormals);
-        void addNormals(std::vector<vec3f> const &newNormals);
-        void addUvs(std::vector<float> const &newUvs);
-        //TODO: void addUvs(std::vector<vec2f> const &newUvs);
-        void addColours(std::vector<float> const &newColours);
-        void addColours(std::vector<vec3f> const &newColours);
-    }; // end struct BufferData
-};// end namespace givr
-//------------------------------------------------------------------------------
-// END buffer_data.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Start draw.h
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-// Example Code:
-// FlatShading style{.colour=yellow};
-// Sphere geom{.radius=1};
-// auto spheres = createInstancedRenderable(geom, style);
-// for (..) {
-//     addInstance(spheres, at(x, y));
-// }
-// draw(spheres, view);
-//------------------------------------------------------------------------------
-namespace givr {
-    template <typename GeometryT, typename StyleT>
-    typename StyleT::InstancedRenderContext
-    createInstancedRenderable(GeometryT const &g, StyleT const &style) {
-        typename StyleT::InstancedRenderContext ctx =
-            getInstancedContext(g, style);
-        allocateBuffers(ctx);
-        uploadBuffers(ctx, fillBuffers(g, style));
-        return ctx;
-    }
-    template <typename GeometryT, typename StyleT>
-    typename StyleT::RenderContext
-    createRenderable(GeometryT const &g, StyleT const &style) {
-        typename StyleT::RenderContext ctx =
-            getContext(g, style);
-        allocateBuffers(ctx);
-        uploadBuffers(ctx, fillBuffers(g, style));
-        return ctx;
-    }
-    template <typename GeometryT, typename StyleT>
-    void updateRenderable(
-        GeometryT const &g,
-        StyleT const &style,
-        typename StyleT::InstancedRenderContext &ctx
-    ) {
-        updateStyle(ctx, style);
-        uploadBuffers(ctx, fillBuffers(g, style));
-    }
-    template <typename GeometryT, typename StyleT>
-    void updateRenderable(
-        GeometryT const &g,
-        StyleT const &style,
-        typename StyleT::RenderContext &ctx
-    ) {
-        updateStyle(ctx, style);
-        uploadBuffers(ctx, fillBuffers(g, style));
-    }
-    template <typename ContextT>
-    void addInstance(ContextT &ctx, glm::mat4 const &f) {
-        ctx.modelTransforms.push_back(f);
-    }
-
-}
-//------------------------------------------------------------------------------
-// END draw.h
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
 // Start vertex_array_data.h
 //------------------------------------------------------------------------------
 
@@ -10280,7 +10180,7 @@ namespace givr {
 // is compatible with the style.
 namespace givr {
 template <givr::PrimitiveType PrimitiveValue>
-class VertextArrayData {
+class VertexArrayData {
 };
 
 // A constexpr function for determining the primitive type from
@@ -10289,27 +10189,27 @@ template <typename GeometryT>
 constexpr givr::PrimitiveType getPrimitive() {
     typedef givr::PrimitiveType pt;
     typedef typename GeometryT::Data Geometry;
-    if constexpr (std::is_base_of<VertextArrayData<pt::POINTS>, Geometry>::value) {
+    if constexpr (std::is_base_of<VertexArrayData<pt::POINTS>, Geometry>::value) {
         return PrimitiveType::POINTS;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINES>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINES>, Geometry>::value) {
         return PrimitiveType::LINES;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINE_LOOP>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINE_LOOP>, Geometry>::value) {
         return PrimitiveType::LINE_LOOP;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINE_STRIP>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINE_STRIP>, Geometry>::value) {
         return PrimitiveType::LINE_STRIP;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLES>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLES>, Geometry>::value) {
         return PrimitiveType::TRIANGLES;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLE_STRIP>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLE_STRIP>, Geometry>::value) {
         return PrimitiveType::TRIANGLE_STRIP;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLE_FAN>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLE_FAN>, Geometry>::value) {
         return PrimitiveType::TRIANGLE_FAN;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINES_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINES_ADJACENCY>, Geometry>::value) {
         return PrimitiveType::LINES_ADJACENCY;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINE_STRIP_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINE_STRIP_ADJACENCY>, Geometry>::value) {
         return PrimitiveType::LINE_STRIP_ADJACENCY;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLES_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLES_ADJACENCY>, Geometry>::value) {
         return PrimitiveType::TRIANGLES_ADJACENCY;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLE_STRIP_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLE_STRIP_ADJACENCY>, Geometry>::value) {
         return PrimitiveType::TRIANGLE_STRIP_ADJACENCY;
     } else {
         // We can guarantee we can render this.
@@ -10323,15 +10223,15 @@ template <typename GeometryT>
 constexpr bool isLineBased() {
     typedef givr::PrimitiveType pt;
     typedef typename GeometryT::Data Geometry;
-    if constexpr (std::is_base_of<VertextArrayData<pt::LINES>, Geometry>::value) {
+    if constexpr (std::is_base_of<VertexArrayData<pt::LINES>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINE_LOOP>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINE_LOOP>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINE_STRIP>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINE_STRIP>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINES_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINES_ADJACENCY>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::LINE_STRIP_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::LINE_STRIP_ADJACENCY>, Geometry>::value) {
         return true;
     } else {
         return false;
@@ -10344,15 +10244,15 @@ template <typename GeometryT>
 constexpr bool isTriangleBased() {
     typedef givr::PrimitiveType pt;
     typedef typename GeometryT::Data Geometry;
-    if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLES>, Geometry>::value) {
+    if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLES>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLE_STRIP>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLE_STRIP>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLE_FAN>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLE_FAN>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLES_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLES_ADJACENCY>, Geometry>::value) {
         return true;
-    } else if constexpr (std::is_base_of<VertextArrayData<pt::TRIANGLE_STRIP_ADJACENCY>, Geometry>::value) {
+    } else if constexpr (std::is_base_of<VertexArrayData<pt::TRIANGLE_STRIP_ADJACENCY>, Geometry>::value) {
         return true;
     } else {
         return false;
@@ -10364,7 +10264,7 @@ template <typename GeometryT>
 constexpr bool isPointBased() {
     typedef givr::PrimitiveType pt;
     typedef typename GeometryT::Data Geometry;
-    if constexpr (std::is_base_of<VertextArrayData<pt::POINTS>, Geometry>::value) {
+    if constexpr (std::is_base_of<VertexArrayData<pt::POINTS>, Geometry>::value) {
         return true;
     } else {
         return false;
@@ -10629,6 +10529,7 @@ namespace givr {
 
 namespace givr {
 
+    template <typename GeometryT, typename StyleT>
     struct RenderContext {
         std::unique_ptr<Program> shaderProgram;
         std::unique_ptr<VertexArray> vao;
@@ -10639,11 +10540,13 @@ namespace givr {
 
         GLuint numberOfIndices;
         GLuint startIndex;
-        GLuint endIndex;
+        GLuint vertexCount;
 
         PrimitiveType primitive;
 
         bool hasIndices = false;
+
+        typename StyleT::Parameters params;
 
         // Default ctor/dtor & move operations
         RenderContext() = default;
@@ -10654,11 +10557,13 @@ namespace givr {
         // But no copy or assignment. Bad.
         RenderContext(const RenderContext & ) = delete;
         RenderContext &operator=(const RenderContext &) = delete;
+
+        std::string getModelSource() const { return "uniform"; }
     };
 
-    template <typename ViewContextT>
+    template <typename GeometryT, typename StyleT, typename ViewContextT>
     void drawArray(
-        RenderContext &ctx,
+        RenderContext<GeometryT, StyleT> &ctx,
         ViewContextT const &viewCtx,
         std::function<void(std::unique_ptr<Program> const&)> setUniforms
     ) {
@@ -10675,21 +10580,123 @@ namespace givr {
         ctx.vao->bind();
         glPolygonMode(GL_FRONT, GL_FILL);
         GLenum mode = givr::getMode(ctx.primitive);
-        if (ctx.numberOfIndices > 0) {
-            glDrawElements(mode, ctx.numberOfIndices, GL_UNSIGNED_INT, 0);
+        if constexpr (hasIndices<GeometryT>::value) {
+            if (ctx.numberOfIndices > 0) {
+                glDrawElements(mode, ctx.numberOfIndices, GL_UNSIGNED_INT, 0);
+            } else {
+                glDrawArrays(mode, ctx.startIndex, ctx.vertexCount);
+            }
         } else {
-            glDrawArrays(mode, ctx.startIndex, ctx.endIndex);
+            glDrawArrays(mode, ctx.startIndex, ctx.vertexCount);
         }
 
         ctx.vao->unbind();
     }
-    void allocateBuffers(
-        RenderContext &ctx
-    );
+    template <typename GeometryT, typename StyleT>
+    void allocateBuffers(RenderContext<GeometryT, StyleT> &ctx) {
+        ctx.vao = std::make_unique<VertexArray>();
+        ctx.vao->alloc();
+
+        if constexpr (hasIndices<GeometryT>::value) {
+            // Map - but don't upload indices data
+            std::unique_ptr<Buffer> indices = std::make_unique<Buffer>();
+            indices->alloc();
+            ctx.arrayBuffers.push_back(std::move(indices));
+        }
+
+        auto allocateBuffer = [&ctx]() {
+            std::unique_ptr<Buffer> vbo = std::make_unique<Buffer>();
+            vbo->alloc();
+            ctx.arrayBuffers.push_back(std::move(vbo));
+        };
+
+        // Upload / bind / map model data
+        if constexpr (hasVertices<GeometryT>::value) {
+            allocateBuffer();//data.vertices);
+        }
+        if constexpr (hasNormals<GeometryT>::value) {
+            allocateBuffer();//data.normals);
+        }
+        if constexpr (hasUvs<GeometryT>::value) {
+            allocateBuffer();//data.uvs);
+        }
+        if constexpr (hasColours<GeometryT>::value) {
+            allocateBuffer();//data.colours);
+        }
+    }
+    template <typename GeometryT, typename StyleT>
     void uploadBuffers(
-        RenderContext &ctx,
-        BufferData const &data
-    );
+        RenderContext<GeometryT, StyleT> &ctx,
+        typename GeometryT::Data const &data
+    ) {
+        // Start by setting the appropriate context variables for rendering.
+        if constexpr (hasIndices<GeometryT>::value) {
+            ctx.numberOfIndices = data.indices.size();
+        } else {
+            ctx.numberOfIndices = 0;
+        }
+        ctx.startIndex = 0;
+        ctx.vertexCount =  data.vertices.size() / data.dimensions;
+
+        std::uint16_t vaIndex = 4;
+        ctx.vao->bind();
+
+        std::uint16_t bufferIndex = 0;
+        if constexpr (hasIndices<GeometryT>::value) {
+            std::unique_ptr<Buffer> &indices = ctx.arrayBuffers[0];
+            indices->bind(GL_ELEMENT_ARRAY_BUFFER);
+            indices->data(
+                    GL_ELEMENT_ARRAY_BUFFER,
+                    data.indices,
+                    getBufferUsageType(data.indicesType));
+            ++bufferIndex;
+        }
+
+        auto applyBuffer = [&ctx, &vaIndex, &bufferIndex](
+            GLenum type,
+            GLuint size,
+            GLenum bufferType,
+            std::string name,
+            gsl::span<const float> const &data
+        ) {
+            // if this data piece is empty disable this one.
+            std::unique_ptr<Buffer> &vbo = ctx.arrayBuffers[bufferIndex];
+            vbo->bind(type);
+            if (data.size() == 0) {
+                glDisableVertexAttribArray(vaIndex);
+            } else {
+                glBindAttribLocation(*ctx.shaderProgram.get(), vaIndex, name.c_str());
+                vbo->data(type, data, bufferType);
+                glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+                glEnableVertexAttribArray(vaIndex);
+            }
+            ++vaIndex;
+            ++bufferIndex;
+        };
+
+        // Upload / bind / map model data
+        if constexpr (hasVertices<GeometryT>::value) {
+            applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), "position", data.vertices);
+        }
+        if constexpr (hasNormals<GeometryT>::value) {
+            applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), "normals", data.normals);
+        }
+        if constexpr (hasUvs<GeometryT>::value) {
+            applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), "uvs", data.uvs);
+        }
+        if constexpr (hasColours<GeometryT>::value) {
+            applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), "colour", data.colours);
+        }
+
+        ctx.vao->unbind();
+
+        if constexpr (hasIndices<GeometryT>::value) {
+            ctx.arrayBuffers[0]->unbind(GL_ELEMENT_ARRAY_BUFFER);
+            if (ctx.arrayBuffers.size() > 1) {
+                ctx.arrayBuffers[1]->unbind(GL_ARRAY_BUFFER);
+            }
+        }
+    }
 };// end namespace givr
 //------------------------------------------------------------------------------
 // END renderer.h
@@ -10707,6 +10714,7 @@ namespace givr {
 
 namespace givr {
 
+    template <typename GeometryT, typename StyleT>
     struct InstancedRenderContext {
         std::unique_ptr<Program> shaderProgram;
         std::unique_ptr<VertexArray> vao;
@@ -10720,9 +10728,11 @@ namespace givr {
 
         GLuint numberOfIndices;
         GLuint startIndex;
-        GLuint endIndex;
+        GLuint vertexCount;
 
         PrimitiveType primitive;
+
+        typename StyleT::Parameters params;
 
         // Default ctor/dtor & move operations
         InstancedRenderContext() = default;
@@ -10733,11 +10743,13 @@ namespace givr {
         // But no copy or assignment. Bad.
         InstancedRenderContext(const InstancedRenderContext & ) = delete;
         InstancedRenderContext &operator=(const InstancedRenderContext &) = delete;
+
+        std::string getModelSource() { return "layout(location=0) in "; }
     };
 
-    template <typename ViewContextT>
+    template <typename GeometryT, typename StyleT, typename ViewContextT>
     void drawInstanced(
-        InstancedRenderContext &ctx,
+        InstancedRenderContext<GeometryT, StyleT> &ctx,
         ViewContextT const &viewCtx,
         std::function<void(std::unique_ptr<Program> const&)> setUniforms
     ) {
@@ -10756,15 +10768,25 @@ namespace givr {
         glPolygonMode(GL_FRONT, GL_FILL);
         GLenum mode = givr::getMode(ctx.primitive);
         ctx.modelTransformsBuffer->bind(GL_ARRAY_BUFFER);
-        ctx.modelTransformsBuffer->data(GL_ARRAY_BUFFER, ctx.modelTransforms, GL_DYNAMIC_DRAW);
+        ctx.modelTransformsBuffer->data(
+            GL_ARRAY_BUFFER,
+            gsl::span<mat4f>(ctx.modelTransforms),
+            GL_DYNAMIC_DRAW
+        );
 
-        if (ctx.numberOfIndices > 0) {
-            glDrawElementsInstanced(
-                mode, ctx.numberOfIndices, GL_UNSIGNED_INT, 0, ctx.modelTransforms.size()
-            );
+        if constexpr (hasIndices<GeometryT>::value) {
+            if (ctx.numberOfIndices > 0) {
+                glDrawElementsInstanced(
+                    mode, ctx.numberOfIndices, GL_UNSIGNED_INT, 0, ctx.modelTransforms.size()
+                );
+            } else {
+                glDrawArraysInstanced(
+                    mode, ctx.startIndex, ctx.vertexCount, ctx.modelTransforms.size()
+                );
+            }
         } else {
             glDrawArraysInstanced(
-                mode, ctx.startIndex, ctx.endIndex, ctx.modelTransforms.size()
+                mode, ctx.startIndex, ctx.vertexCount, ctx.modelTransforms.size()
             );
         }
 
@@ -10772,13 +10794,120 @@ namespace givr {
 
         ctx.modelTransforms.clear();
     }
-    void allocateBuffers(
-        InstancedRenderContext &ctx
-    );
+
+    template <typename GeometryT, typename StyleT>
+    void allocateBuffers(InstancedRenderContext<GeometryT, StyleT> &ctx) {
+        ctx.vao = std::make_unique<VertexArray>();
+        ctx.vao->alloc();
+
+        // Map - but don't upload framing data.
+        ctx.modelTransformsBuffer = std::make_unique<Buffer>();
+        ctx.modelTransformsBuffer->alloc();
+
+        if constexpr (hasIndices<GeometryT>::value) {
+            // Map - but don't upload indices data
+            std::unique_ptr<Buffer> indices = std::make_unique<Buffer>();
+            indices->alloc();
+            ctx.arrayBuffers.push_back(std::move(indices));
+        }
+
+        auto allocateBuffer = [&ctx]() {
+            std::unique_ptr<Buffer> vbo = std::make_unique<Buffer>();
+            vbo->alloc();
+            ctx.arrayBuffers.push_back(std::move(vbo));
+        };
+
+        // Upload / bind / map model data
+        if constexpr (hasVertices<GeometryT>::value) {
+            allocateBuffer();//data.vertices);
+        }
+        if constexpr (hasNormals<GeometryT>::value) {
+            allocateBuffer();//data.normals);
+        }
+        if constexpr (hasUvs<GeometryT>::value) {
+            allocateBuffer();//data.uvs);
+        }
+        if constexpr (hasColours<GeometryT>::value) {
+            allocateBuffer();//data.colours);
+        }
+    }
+
+    template <typename GeometryT, typename StyleT>
     void uploadBuffers(
-        InstancedRenderContext &ctx,
-        BufferData const &data
-    );
+        InstancedRenderContext<GeometryT, StyleT> &ctx,
+        typename GeometryT::Data const &data
+    ) {
+        // Start by setting the appropriate context variables for rendering.
+        if constexpr (hasIndices<GeometryT>::value) {
+            ctx.numberOfIndices = data.indices.size();
+        } else {
+            ctx.numberOfIndices = 0;
+        }
+        ctx.startIndex = 0;
+        ctx.vertexCount =  data.vertices.size() / data.dimensions;
+
+        std::uint16_t vaIndex = 0;
+        ctx.vao->bind();
+
+        // Upload framing data.
+        ctx.modelTransformsBuffer->bind(GL_ARRAY_BUFFER);
+        auto vec4Size = sizeof(mat4f)/4;
+        for (std::uint16_t i = 0; i < 4; ++i) {
+            glVertexAttribPointer(vaIndex, 4, GL_FLOAT, GL_FALSE, sizeof(mat4f), (GLvoid*)(i*vec4Size));
+            glEnableVertexAttribArray(vaIndex);
+            glVertexAttribDivisor(vaIndex, 1);
+            ++vaIndex;
+        }
+
+        std::uint16_t bufferIndex = 0;
+        if constexpr (hasIndices<GeometryT>::value) {
+            std::unique_ptr<Buffer> &indices = ctx.arrayBuffers[0];
+            indices->bind(GL_ELEMENT_ARRAY_BUFFER);
+            indices->data(
+                    GL_ELEMENT_ARRAY_BUFFER,
+                    data.indices,
+                    getBufferUsageType(data.indicesType));
+            ++bufferIndex;
+        }
+
+        auto applyBuffer = [&ctx, &vaIndex, &bufferIndex](
+            GLenum type,
+            GLuint size,
+            GLenum bufferType,
+            std::string name,
+            gsl::span<const float> const &data
+        ) {
+            std::unique_ptr<Buffer> &vbo = ctx.arrayBuffers[bufferIndex];
+            vbo->bind(type);
+            if (data.size() == 0) {
+                glDisableVertexAttribArray(vaIndex);
+            } else {
+                vbo->data(type, data, bufferType);
+                glBindAttribLocation(*ctx.shaderProgram.get(), vaIndex, name.c_str());
+                glVertexAttribPointer(vaIndex, size, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+                glEnableVertexAttribArray(vaIndex);
+            }
+            ++vaIndex;
+            ++bufferIndex;
+        };
+
+        // Upload / bind / map model data
+        if constexpr (hasVertices<GeometryT>::value)
+            applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.verticesType), "position", data.vertices);
+        if constexpr (hasNormals<GeometryT>::value)
+            applyBuffer(GL_ARRAY_BUFFER, data.dimensions, getBufferUsageType(data.normalsType), "normals", data.normals);
+        if constexpr (hasUvs<GeometryT>::value)
+            applyBuffer(GL_ARRAY_BUFFER, 2, getBufferUsageType(data.uvsType), "uvs", data.uvs);
+        if constexpr (hasColours<GeometryT>::value)
+            applyBuffer(GL_ARRAY_BUFFER, 3, getBufferUsageType(data.coloursType), "colour", data.colours);
+
+        ctx.vao->unbind();
+
+        ctx.arrayBuffers[0]->unbind(GL_ELEMENT_ARRAY_BUFFER);
+        if (ctx.arrayBuffers.size() > 1) {
+            ctx.arrayBuffers[1]->unbind(GL_ARRAY_BUFFER);
+        }
+    }
 };// end namespace givr
 //------------------------------------------------------------------------------
 // END instanced_renderer.h
@@ -10989,9 +11118,25 @@ namespace camera {
 namespace givr {
 namespace geometry {
 
-    struct TriangleGeometry
+    struct Triangle
         : public Geometry<Point1, Point2, Point3>
     {
+        template <typename... Args>
+        Triangle(Args &&... args) {
+            using required_args = std::tuple<Point1, Point2, Point3>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+
+            static_assert(
+                is_subset_of<required_args, std::tuple<Args...>> &&
+                is_subset_of<std::tuple<Args...>, Triangle::Args> &&
+                sizeof...(args) <= std::tuple_size<Triangle::Args>::value,
+                "You have provided incorrect parameters for Triangle. "
+                "Point1, Point2 and Point3 are required.");
+            set(std::forward<Args>(args)...);
+        }
         vec3f const &p1() const { return value<Point1>().value(); }
         vec3f const &p2() const { return value<Point2>().value(); }
         vec3f const &p3() const { return value<Point3>().value(); }
@@ -11000,7 +11145,7 @@ namespace geometry {
         vec3f &p2() { return value<Point2>().value(); }
         vec3f &p3() { return value<Point3>().value(); }
 
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+        struct Data : public VertexArrayData<PrimitiveType::TRIANGLES> {
             std::uint16_t dimensions = 3;
             BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
             std::vector<float> vertices;
@@ -11009,27 +11154,11 @@ namespace geometry {
             std::vector<float> normals;
         };
     };
+    // Backwards Compatibility
+    using TriangleGeometry = Triangle;
 
-    template <typename... Args>
-    TriangleGeometry Triangle(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2, Point3>;
 
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(
-            is_subset_of<required_args, std::tuple<Args...>> &&
-            is_subset_of<std::tuple<Args...>, TriangleGeometry::Args> &&
-            sizeof...(args) <= std::tuple_size<TriangleGeometry::Args>::value,
-            "You have provided incorrect parameters for Triangle. "
-            "Point1, Point2 and Point3 are required.");
-        TriangleGeometry t;
-        t.set(std::forward<Args>(args)...);
-        return t;
-    }
-
-    TriangleGeometry::Data generateGeometry(TriangleGeometry const &t);
+    Triangle::Data generateGeometry(Triangle const &t);
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
@@ -11042,6 +11171,8 @@ namespace geometry {
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#include <utility>
+#include <gsl/span>
 
 
 namespace givr {
@@ -11057,19 +11188,20 @@ namespace geometry {
 
         // TODO: add simpler ways to construct this.
 
-        struct Data : public VertextArrayData<PrimitiveT> {
+        struct Data : public VertexArrayData<PrimitiveT> {
             std::uint16_t dimensions = 3;
 
             BufferUsageType verticesType;
             BufferUsageType normalsType;
             BufferUsageType indicesType;
             BufferUsageType coloursType;
+            BufferUsageType uvsType;
 
-            std::vector<float> vertices;
-            std::vector<float> normals;
-            std::vector<std::uint32_t> indices;
-            std::vector<float> colours;
-            std::vector<float> uvs;
+            gsl::span<const float> vertices;
+            gsl::span<const float> normals;
+            gsl::span<const uint32_t> indices;
+            gsl::span<const float> colours;
+            gsl::span<const float> uvs;
         };
 
     };
@@ -11086,13 +11218,23 @@ namespace geometry {
     template <PrimitiveType PrimitiveT>
     typename CustomGeometry<PrimitiveT>::Data generateGeometry(CustomGeometry<PrimitiveT> const &l) {
         typename CustomGeometry<PrimitiveT>::Data data;
-
-        __customGeometryCopy<vec3f, 3>(l.vertices, data.vertices);
-        __customGeometryCopy<vec3f, 3>(l.normals, data.normals);
-        __customGeometryCopy<vec3f, 3>(l.colours, data.colours);
-        __customGeometryCopy<vec2f, 2>(l.uvs, data.uvs);
-
-        data.indices.insert(data.indices.end(), l.indices.begin(), l.indices.end());
+        data.vertices = gsl::span<const float>(
+            reinterpret_cast<float const *>(l.vertices.data()),
+            l.vertices.size()*3
+        );
+        data.normals = gsl::span<const float>(
+            reinterpret_cast<float const *>(l.normals.data()),
+            l.normals.size()*3
+        );
+        data.colours = gsl::span<const float>(
+            reinterpret_cast<float const *>(l.colours.data()),
+            l.colours.size()*3
+        );
+        data.uvs = gsl::span<const float>(
+            reinterpret_cast<float const *>(l.uvs.data()),
+            l.uvs.size()*2
+        );
+        data.indices = gsl::span<const std::uint32_t>(l.indices);
 
         return data;
     }
@@ -11113,7 +11255,7 @@ namespace givr {
 namespace geometry {
 
     template <PrimitiveType LineType>
-    struct PolyLineGeometry {
+    struct PolyLine {
         static_assert(
             LineType != PrimitiveType::LINE_LOOP ||
             LineType != PrimitiveType::LINE_STRIP,
@@ -11122,6 +11264,11 @@ namespace geometry {
         private:
             std::vector<Point> m_points;
         public:
+
+            template <typename... Args>
+            PolyLine(Args &&... args) {
+                points() = {args...};
+            }
             std::vector<Point> &points() { return m_points; }
             std::vector<Point> const &points() const { return m_points; }
             std::vector<Point> &operator*() { return m_points; }
@@ -11130,24 +11277,20 @@ namespace geometry {
             void push_back(Point const &p) { m_points.push_back(p); }
             void clear() { m_points.clear(); }
 
-        struct Data : public VertextArrayData<LineType> {
-            std::uint16_t dimensions = 3;
+            struct Data : public VertexArrayData<LineType> {
+                std::uint16_t dimensions = 3;
 
-            BufferUsageType verticesType;
-            std::vector<float> vertices;
-        };
+                BufferUsageType verticesType;
+                std::vector<float> vertices;
+            };
     };
-
-    template <PrimitiveType LineType, typename... Args>
-    PolyLineGeometry<LineType> PolyLine(Args &&... args) {
-        PolyLineGeometry<LineType> geometry;
-        geometry.points() = {args...};
-        return geometry;
-    }
+    // Backwards Compatibility
+    template<PrimitiveType LineType>
+    using PolyLineGeometry = PolyLine<LineType>;
 
     template <PrimitiveType LineType>
-    typename PolyLineGeometry<LineType>::Data generateGeometry(PolyLineGeometry<LineType> const &l) {
-        typename PolyLineGeometry<LineType>::Data data;
+    typename PolyLine<LineType>::Data generateGeometry(PolyLine<LineType> const &l) {
+        typename PolyLine<LineType>::Data data;
         auto const &points = l.points();
         data.vertices.reserve(points.size()*3);
         for (std::size_t i = 0; i < points.size(); ++i) {
@@ -11172,9 +11315,31 @@ namespace geometry {
 namespace givr {
 namespace geometry {
 
-    struct QuadGeometry
+    struct Quad
         : public Geometry<Point1, Point2, Point3, Point4>
     {
+        template <typename... Args>
+        Quad(Args &&... args) {
+            using required_args = std::tuple<Point1, Point2, Point3>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+            static_assert(
+                is_subset_of<required_args, std::tuple<Args...>> &&
+                is_subset_of<std::tuple<Args...>, Quad::Args> &&
+                sizeof...(args) <= std::tuple_size<Quad::Args>::value,
+                "You have provided incorrect parameters for Quad. "
+                "Point1, Point2, and Point3 are required. Point4 is optional. "
+                "If you provide Point4, then you are responsible for ensuring it "
+                "is co-planar with Point1, Point2, and Point3");
+            if constexpr (sizeof...(args) > 0) {
+                set(std::forward<Args>(args)...);
+            }
+            if constexpr (sizeof...(args) == 3) {
+                set(Point4(p2() + (p3() - p1())));
+            }
+        }
 
         vec3f const &p1() const { return value<Point1>().value(); }
         vec3f const &p2() const { return value<Point2>().value(); }
@@ -11186,7 +11351,7 @@ namespace geometry {
         vec3f &p3() { return value<Point3>().value(); }
         vec3f &p4() { return value<Point4>().value(); }
 
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+        struct Data : public VertexArrayData<PrimitiveType::TRIANGLES> {
             std::uint16_t dimensions = 3;
 
             BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
@@ -11202,33 +11367,11 @@ namespace geometry {
             std::vector<float> uvs;
         };
     };
+    // Backwards compatibility
+    using QuadGeometry = Quad;
 
-    template <typename... Args>
-    QuadGeometry Quad(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2, Point3>;
 
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-        static_assert(
-            is_subset_of<required_args, std::tuple<Args...>> &&
-            is_subset_of<std::tuple<Args...>, QuadGeometry::Args> &&
-            sizeof...(args) <= std::tuple_size<QuadGeometry::Args>::value,
-            "You have provided incorrect parameters for Quad. "
-            "Point1, Point2, and Point3 are required. Point4 is optional. "
-            "If you provide Point4, then you are responsible for ensuring it "
-            "is co-planar with Point1, Point2, and Point3");
-        QuadGeometry t;
-        if constexpr (sizeof...(args) > 0) {
-            t.set(std::forward<Args>(args)...);
-        }
-        if constexpr (sizeof...(args) == 3) {
-            t.set(Point4(t.p2() + (t.p3() - t.p1())));
-        }
-        return t;
-    }
-
-    QuadGeometry::Data generateGeometry(QuadGeometry const &t);
+    Quad::Data generateGeometry(Quad const &t);
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
@@ -11245,15 +11388,34 @@ namespace geometry {
 
 namespace givr {
 namespace geometry {
-    struct MeshGeometry
+    struct Mesh
         : public Geometry<Filename>
           // TODO: Add other parameters like smooth shading etc.
     {
+        template <typename... Args>
+        Mesh(Args &&... args) {
+            using required_args = std::tuple<Filename>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+
+            static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+                "Filename is a required parameter for Mesh. "
+                "Please provide them.");
+            static_assert(is_subset_of<std::tuple<Args...>, Mesh::Args>,
+                "You have provided incorrect parameters for Mesh. "
+                "Filename is required.");
+            static_assert(sizeof...(args) <= std::tuple_size<Mesh::Args>::value,
+                "You have provided incorrect parameters for Mesh. "
+                "Filename is required.");
+            set(std::forward<Args>(args)...);
+        }
 
         std::string const &filename() const { return value<Filename>().value(); }
         std::string &filename() { return value<Filename>().value(); }
 
-        struct Data : VertextArrayData<PrimitiveType::TRIANGLES> {
+        struct Data : VertexArrayData<PrimitiveType::TRIANGLES> {
             std::uint16_t dimensions = 3;
 
             BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
@@ -11267,30 +11429,11 @@ namespace geometry {
             std::vector<float> uvs;
         };
     };
+    // Backwards compatibility
+    using MeshGeometry = Mesh;
 
-    template <typename... Args>
-    MeshGeometry Mesh(Args &&... args) {
-        using required_args = std::tuple<Filename>;
 
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Filename is a required parameter for Mesh. "
-            "Please provide them.");
-        static_assert(is_subset_of<std::tuple<Args...>, MeshGeometry::Args>,
-            "You have provided incorrect parameters for Mesh. "
-            "Filename is required.");
-        static_assert(sizeof...(args) <= std::tuple_size<MeshGeometry::Args>::value,
-            "You have provided incorrect parameters for Mesh. "
-            "Filename is required.");
-        MeshGeometry m;
-        m.set(std::forward<Args>(args)...);
-        return m;
-    }
-
-    MeshGeometry::Data generateGeometry(const MeshGeometry& m);
+    Mesh::Data generateGeometry(const Mesh& m);
 
 }// end namespace geometry
 }// end namespace givr
@@ -11307,46 +11450,46 @@ namespace geometry {
 namespace givr {
 namespace geometry {
 
-    struct LineGeometry
+    struct Line
         : public Geometry<Point1, Point2>
     {
+        template <typename... Args>
+        Line(Args &&... args) {
+            using required_args = std::tuple<Point1, Point2>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+
+            static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+                "Point1 and Point2 are required parameters for Line. "
+                "Please provide them.");
+            static_assert(is_subset_of<std::tuple<Args...>, Line::Args>,
+                "You have provided incorrect parameters for Line. "
+                "Point1 and Point2 are required.");
+            static_assert(sizeof...(args) <= std::tuple_size<Line::Args>::value,
+                "You have provided incorrect parameters for Line. "
+                "Point1 and Point2 are required.");
+            set(std::forward<Args>(args)...);
+        }
+
         vec3f const &p1() const { return value<Point1>().value(); }
         vec3f const &p2() const { return value<Point2>().value(); }
 
         vec3f &p1() { return value<Point1>().value(); }
         vec3f &p2() { return value<Point2>().value(); }
 
-        struct Data : public VertextArrayData<PrimitiveType::LINES> {
+        struct Data : public VertexArrayData<PrimitiveType::LINES> {
             std::uint16_t dimensions = 3;
 
             BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
             std::vector<float> vertices;
         };
     };
+    // Backwards Compatibility
+    using LineGeometry = Line;
 
-    template <typename... Args>
-    LineGeometry Line(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Point1 and Point2 are  a required parameter for Line. "
-            "Please provide them.");
-        static_assert(is_subset_of<std::tuple<Args...>, LineGeometry::Args>,
-            "You have provided incorrect parameters for Line. "
-            "Point1 and Point2 are required.");
-        static_assert(sizeof...(args) <= std::tuple_size<LineGeometry::Args>::value,
-            "You have provided incorrect parameters for Line. "
-            "Point1 and Point2 are required.");
-        LineGeometry l;
-        l.set(std::forward<Args>(args)...);
-        return l;
-    }
-
-    LineGeometry::Data generateGeometry(LineGeometry const &l);
+    Line::Data generateGeometry(Line const &l);
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
@@ -11362,9 +11505,35 @@ namespace geometry {
 namespace givr {
 namespace geometry {
 
-    struct CylinderGeometry
+    struct Cylinder
         : public Geometry<Point1, Point2, Radius, AzimuthPoints>
     {
+        template <typename... Args>
+        Cylinder(Args &&... args) {
+            using required_args = std::tuple<Point1, Point2>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+
+            static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+                "Point1 and Point2 are a required parameter for Cylinder. "
+                "Please provide them.");
+            static_assert(is_subset_of<std::tuple<Args...>, Cylinder::Args>,
+                "You have provided incorrect parameters for Cylinder. "
+                "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
+            static_assert(sizeof...(args) <= std::tuple_size<Cylinder::Args>::value,
+                "You have provided incorrect parameters for Cylinder. "
+                "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
+            set(Point1(0.f, 0.5f, 0.f));
+            set(Point2(0.f, -0.5f, 0.f));
+            set(Radius(1.0f));
+            set(AzimuthPoints(20));
+            if constexpr (sizeof...(args) > 0) {
+                set(std::forward<Args>(args)...);
+            }
+        }
+
         vec3f const &p1() const { return value<Point1>().value(); }
         vec3f const &p2() const { return value<Point2>().value(); }
 
@@ -11374,7 +11543,7 @@ namespace geometry {
         float radius() const { return value<Radius>().value(); }
         std::size_t azimuthPoints() const { return value<AzimuthPoints>().value(); }
 
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+        struct Data : public VertexArrayData<PrimitiveType::TRIANGLES> {
             std::uint16_t dimensions = 3;
 
             BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
@@ -11388,35 +11557,10 @@ namespace geometry {
         };
     };
 
-    template <typename... Args>
-    CylinderGeometry Cylinder(Args &&... args) {
-        using required_args = std::tuple<Point1, Point2>;
+    // Backwards Compatibility
+    using CylinderGeometry = Cylinder;
 
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Point1 and Point2 are a required parameter for Cylinder. "
-            "Please provide them.");
-        static_assert(is_subset_of<std::tuple<Args...>, CylinderGeometry::Args>,
-            "You have provided incorrect parameters for Cylinder. "
-            "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
-        static_assert(sizeof...(args) <= std::tuple_size<CylinderGeometry::Args>::value,
-            "You have provided incorrect parameters for Cylinder. "
-            "Point1 and Point2 are required. Radius and AzimuthPoints are optional.");
-        CylinderGeometry c;
-        c.set(Point1(0.f, 0.5f, 0.f));
-        c.set(Point2(0.f, -0.5f, 0.f));
-        c.set(Radius(1.0f));
-        c.set(AzimuthPoints(20));
-        if constexpr (sizeof...(args) > 0) {
-            c.set(std::forward<Args>(args)...);
-        }
-        return c;
-    }
-
-    CylinderGeometry::Data generateGeometry(CylinderGeometry const &l);
+    Cylinder::Data generateGeometry(Cylinder const &l);
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
@@ -11433,11 +11577,31 @@ namespace geometry {
 namespace givr {
 namespace geometry {
 
-    struct SphereGeometry
+    struct Sphere
         : public Geometry<Centroid, Radius, AzimuthPoints, AltitudePoints>
     {
+        template <typename... Args>
+        Sphere(Args &&... args) {
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
 
-        struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+            static_assert(is_subset_of<std::tuple<Args...>, Sphere::Args>,
+                "You have provided incorrect parameters for Sphere. "
+                "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
+            static_assert(sizeof...(args) <= std::tuple_size<Sphere::Args>::value,
+                "You have provided incorrect parameters for Sphere. "
+                "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
+            this->set(Centroid(0.0, 0.0, 0.0));
+            this->set(Radius(1.0));
+            this->set(AzimuthPoints(20.));
+            this->set(AltitudePoints(20.));
+            if constexpr (sizeof...(args) > 0) {
+                this->set(std::forward<Args>(args)...);
+            }
+        }
+
+        struct Data : public VertexArrayData<PrimitiveType::TRIANGLES> {
             std::uint16_t dimensions = 3;
 
             BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
@@ -11452,36 +11616,76 @@ namespace geometry {
         };
 
     };
+    // Backwards Compatibility
+    using SphereGeometry = Sphere;
 
-    template <typename... Args>
-    SphereGeometry Sphere(Args &&... args) {
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
 
-        static_assert(is_subset_of<std::tuple<Args...>, SphereGeometry::Args>,
-            "You have provided incorrect parameters for Sphere. "
-            "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
-        static_assert(sizeof...(args) <= std::tuple_size<SphereGeometry::Args>::value,
-            "You have provided incorrect parameters for Sphere. "
-            "Centroid, Radius, AzimuthPoints, AltitudePoints are optional.");
-        SphereGeometry s;// = Sphere();
-        s.set(Centroid(0.0, 0.0, 0.0));
-        s.set(Radius(1.0));
-        s.set(AzimuthPoints(20.));
-        s.set(AltitudePoints(20.));
-        if constexpr (sizeof...(args) > 0) {
-            s.set(std::forward<Args>(args)...);
-        }
-        return s;
-    }
-
-    SphereGeometry::Data generateGeometry(SphereGeometry const &s);
+    Sphere::Data generateGeometry(Sphere const &s);
 
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
 // END sphere.h
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Start draw.h
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Example Code:
+// FlatShading style{.colour=yellow};
+// Sphere geom{.radius=1};
+// auto spheres = createInstancedRenderable(geom, style);
+// for (..) {
+//     addInstance(spheres, at(x, y));
+// }
+// draw(spheres, view);
+//------------------------------------------------------------------------------
+namespace givr {
+    template <typename GeometryT, typename StyleT>
+    InstancedRenderContext<GeometryT, StyleT>
+    createInstancedRenderable(GeometryT const &g, StyleT const &style) {
+        auto ctx = getInstancedContext(g, style);
+        allocateBuffers(ctx);
+        uploadBuffers(ctx, fillBuffers(g, style));
+        return ctx;
+    }
+    template <typename GeometryT, typename StyleT>
+    RenderContext<GeometryT, StyleT>
+    createRenderable(GeometryT const &g, StyleT const &style) {
+        auto ctx = getContext(g, style);
+        allocateBuffers(ctx);
+        uploadBuffers(ctx, fillBuffers(g, style));
+        return ctx;
+    }
+    template <typename GeometryT, typename StyleT>
+    void updateRenderable(
+        GeometryT const &g,
+        StyleT const &style,
+        InstancedRenderContext<GeometryT, StyleT> &ctx
+    ) {
+        updateStyle(ctx, style);
+        uploadBuffers(ctx, fillBuffers(g, style));
+    }
+    template <typename GeometryT, typename StyleT>
+    void updateRenderable(
+        GeometryT const &g,
+        StyleT const &style,
+        RenderContext<GeometryT, StyleT> &ctx
+    ) {
+        updateStyle(ctx, style);
+        uploadBuffers(ctx, fillBuffers(g, style));
+    }
+    template <typename GeometryT, typename StyleT>
+    void addInstance(InstancedRenderContext<GeometryT, StyleT> &ctx, glm::mat4 const &f) {
+        ctx.modelTransforms.push_back(f);
+    }
+
+}
+//------------------------------------------------------------------------------
+// END draw.h
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -11493,66 +11697,39 @@ namespace geometry {
 
 namespace givr {
 namespace style {
+    struct GL_LineParameters : public Style<Colour, Width> { };
 
-    struct LineParameters : public Style<Colour, Width> {
-        LineParameters() {
+    struct GL_Line : public GL_LineParameters {
+        using Parameters = GL_LineParameters;
+        template <typename... Args>
+        GL_Line(Args &&... args) {
+            using required_args = std::tuple<Colour>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+
+            static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+                "Colour is a required parameter for GL_Line. Please provide it.");
+            static_assert(is_subset_of<std::tuple<Args...>, GL_Line::Args>,
+                "You have provided incorrect parameters for GL_Line. "
+                "Colour is required. Width is optional.");
+            static_assert(sizeof...(args) <= std::tuple_size<GL_Line::Args>::value,
+                "You have provided incorrect parameters for GL_Line. "
+                "Colour is required. Width is optional.");
             set(Width(1.0));
+            set(std::forward<Args>(args)...);
         }
     };
 
-    struct LineRenderContext
-        : public RenderContext,
-          public LineParameters
-    {
-
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct LineInstancedRenderContext
-        : public InstancedRenderContext,
-          public LineParameters
-    {
-
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct LineStyle : public LineParameters {
-        using RenderContext = LineRenderContext;
-        using InstancedRenderContext = LineInstancedRenderContext;
-    };
-
-    template <typename... Args> LineStyle GL_Line(Args &&... args) {
-        using required_args = std::tuple<Colour>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Colour is a required parameter for LineStyle. Please provide it.");
-        static_assert(is_subset_of<std::tuple<Args...>, LineStyle::Args>,
-            "You have provided incorrect parameters for LineStyle. "
-            "Colour is required. Width is optional.");
-        static_assert(sizeof...(args) <= std::tuple_size<LineStyle::Args>::value,
-            "You have provided incorrect parameters for LineStyle. "
-            "Colour is required. Width is optional.");
-        LineStyle ns;
-        ns.set(std::forward<Args>(args)...);
-        return ns;
-    }
+    using LineStyle = GL_Line; // Backwards compatibility
 
     template <typename GeometryT>
-    BufferData fillBuffers(GeometryT const &g, LineStyle const &) {
+    typename GeometryT::Data fillBuffers(GeometryT const &g, GL_Line const &) {
         static_assert(
             givr::isLineBased<GeometryT>(),
             R"error(
-            The LineStyle style requires LINES, LINE_LOOP, LINE_STRIP,
+            The GL_Line style requires LINES, LINE_LOOP, LINE_STRIP,
             LINES_ADJACENCY, or LINE_STRIP_ADJACENCY for the primitive
             type. The geometry you use is not of this type"
             )error"
@@ -11560,68 +11737,52 @@ namespace style {
         static_assert(
             hasVertices<GeometryT>::value,
             R"error(
-            The LineStyle style requires vertices. The geometry you are using
+            The GL_Line style requires vertices. The geometry you are using
             does not provide them.
             )error"
         );
-        BufferData data;
-        typename GeometryT::Data d = generateGeometry(g);
-        data.dimensions = d.dimensions;
-        data.addVertices(d.vertices);
-
-        if constexpr (hasIndices<GeometryT>::value) {
-            data.indicesType = d.indicesType;
-            data.addIndices(d.indices);
-        }
-
-        // TODO: This could optionally support per vertex colouring too.
-        return std::move(data);
+        return std::move(generateGeometry(g));
     }
 
-    template <typename RenderContextT, typename GeometryT>
-    RenderContextT getContext(GeometryT &, LineStyle const &l) {
-        RenderContextT ctx;
+    template <typename RenderContextT>
+    void setLineUniforms(RenderContextT const &ctx, std::unique_ptr<givr::Program> const &p) {
+        p->setVec3("colour", ctx.params.template value<Colour>());
+    }
+    std::string linesVertexSource(std::string modelSource);
+    std::string linesFragmentSource();
+
+    template <typename GeometryT>
+    RenderContext<GeometryT, GL_Line> getContext(GeometryT const &, GL_Line const &l) {
+        RenderContext<GeometryT, GL_Line> ctx;
         ctx.shaderProgram = std::make_unique<Program>(
-            Shader{ctx.getVertexShaderSource(), GL_VERTEX_SHADER},
-            Shader{ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER}
+            Shader{linesVertexSource(ctx.getModelSource()), GL_VERTEX_SHADER},
+            Shader{linesFragmentSource(), GL_FRAGMENT_SHADER}
         );
         ctx.primitive = getPrimitive<GeometryT>();
         updateStyle(ctx, l);
         return ctx;
     }
 
-    template <typename GeometryT>
-    LineStyle::RenderContext
-    getContext(GeometryT &g, LineStyle const &l) {
-        return getContext<LineStyle::RenderContext, GeometryT>(g, l);
-    }
-
-    template <typename GeometryT>
-    LineStyle::InstancedRenderContext
-    getInstancedContext(GeometryT &g, LineStyle const &l) {
-        return getContext<LineStyle::InstancedRenderContext, GeometryT>(g, l);
-    }
-
     template <typename RenderContextT>
-    void updateStyle(RenderContextT &ctx, LineStyle const &l) {
-        ctx.set(l.args);
+    void updateStyle(RenderContextT &ctx, GL_Line const &l) {
+        ctx.params.set(l.args);
     }
 
-    template <typename ViewContextT>
-    void draw(LineStyle::InstancedRenderContext &ctx, ViewContextT const &viewCtx) {
+    template <typename GeometryT, typename ViewContextT>
+    void draw(InstancedRenderContext<GeometryT, GL_Line> &ctx, ViewContextT const &viewCtx) {
         glEnable(GL_LINE_SMOOTH);
-        glLineWidth(ctx.value<Width>());
+        glLineWidth(ctx.params.template value<Width>());
         drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
+            setLineUniforms(ctx, program);
         });
     }
 
-    template <typename ViewContextT>
-    void draw(LineStyle::RenderContext &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
+    template <typename GeometryT, typename ViewContextT>
+    void draw(RenderContext<GeometryT, GL_Line> &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
         glEnable(GL_LINE_SMOOTH);
-        glLineWidth(ctx.value<Width>());
+        glLineWidth(ctx.params.template value<Width>());
         drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
+            setLineUniforms(ctx, program);
             program->setMat4("model", model);
         });
     }
@@ -11641,111 +11802,76 @@ namespace style {
 
 namespace givr {
 namespace style {
+    struct NoShadingParameters : public Style<Colour> {};
 
-    struct NoShadingParameters : public Style<Colour> {
+    struct NoShading : public NoShadingParameters {
+        using Parameters = NoShadingParameters;
+        template <typename... Args>
+        NoShading(Args &&... args) {
+            using required_args = std::tuple<Colour>;
+
+            using namespace utility;
+            static_assert(!has_duplicate_types<Args...>,
+                "The arguments you passed in have duplicate parameters");
+
+            static_assert(is_subset_of<required_args, std::tuple<Args...>>,
+                "Colour is a required parameter for NoShading. Please provide it.");
+            static_assert(is_subset_of<std::tuple<Args...>, NoShading::Args>,
+                "You have provided incorrect parameters for NoShading. "
+                "Colour is required.");
+            static_assert(sizeof...(args) <= std::tuple_size<NoShading::Args>::value,
+                "You have provided incorrect parameters for NoShading. "
+                "Colour is required.");
+
+            set(std::forward<Args>(args)...);
+        }
+
     };
+    using NoShadingStyle = NoShading;
 
-    struct NoShadingInstancedRenderContext
-        : public InstancedRenderContext,
-          public NoShadingParameters
-    {
-        void setUniforms(std::unique_ptr<Program> const &p) const;
+    template <typename RenderContextT>
+    void setNoShadingUniforms(RenderContextT const &ctx, std::unique_ptr<givr::Program> const &p) {
+        p->setVec3("colour", ctx.params.template value<givr::style::Colour>());
+    }
 
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
+    std::string noShadingVertexSource(std::string modelSource);
+    std::string noShadingFragmentSource();
 
-    struct NoShadingRenderContext
-        : public RenderContext,
-          public NoShadingParameters
-    {
-        void setUniforms(std::unique_ptr<Program> const &p) const;
-
-        std::string getVertexShaderSource() const;
-        std::string getFragmentShaderSource() const;
-    };
-
-    struct NoShadingStyle : public NoShadingParameters {
-        using InstancedRenderContext = NoShadingInstancedRenderContext;
-        using RenderContext = NoShadingRenderContext;
-    };
-
-    template <typename... Args> NoShadingStyle NoShading(Args &&... args) {
-        using required_args = std::tuple<Colour>;
-
-        using namespace utility;
-        static_assert(!has_duplicate_types<Args...>,
-            "The arguments you passed in have duplicate parameters");
-
-        static_assert(is_subset_of<required_args, std::tuple<Args...>>,
-            "Colour is a required parameter for NoShadingStyle. Please provide it.");
-        static_assert(is_subset_of<std::tuple<Args...>, NoShadingStyle::Args>,
-            "You have provided incorrect parameters for NoShadingStyle. "
-            "Colour is required.");
-        static_assert(sizeof...(args) <= std::tuple_size<NoShadingStyle::Args>::value,
-            "You have provided incorrect parameters for NoShadingStyle. "
-            "Colour is required.");
-        NoShadingStyle ns;
-        ns.set(std::forward<Args>(args)...);
-        return ns;
+    template <typename GeometryT>
+    typename GeometryT::Data fillBuffers(GeometryT const &g, NoShading const &) {
+        static_assert(hasVertices<GeometryT>::value, "The NoShading style requires vertices. The geometry you are using does not provide them.");
+        return std::move(generateGeometry(g));
     }
 
     template <typename GeometryT>
-    BufferData fillBuffers(GeometryT const &g, NoShadingStyle const &) {
-        BufferData data;
-        typename GeometryT::Data d = generateGeometry(g);
-        data.dimensions = d.dimensions;
-        static_assert(hasVertices<GeometryT>::value, "The NoShadingStyle style requires vertices. The geometry you are using does not provide them.");
-        data.verticesType = d.verticesType;
-        data.addVertices(d.vertices);
-        if constexpr (hasIndices<GeometryT>::value) {
-            data.indicesType = d.indicesType;
-            data.addIndices(d.indices);
-        }
-        // TODO: this could probably have per vertex colouring too.
-        return std::move(data);
-    }
-
-    template <typename RenderContextT, typename GeometryT>
-    RenderContextT getContext(GeometryT &, NoShadingStyle const &f) {
-        RenderContextT ctx;
+    RenderContext<GeometryT, NoShading> getContext(GeometryT const &, NoShading const &f) {
+        std::cout << "NoShading" << std::endl;
+        RenderContext<GeometryT, NoShading> ctx;
         ctx.shaderProgram = std::make_unique<Program>(
-            Shader{ctx.getVertexShaderSource(), GL_VERTEX_SHADER},
-            Shader{ctx.getFragmentShaderSource(), GL_FRAGMENT_SHADER}
+            Shader{noShadingVertexSource(ctx.getModelSource()), GL_VERTEX_SHADER},
+            Shader{noShadingFragmentSource(), GL_FRAGMENT_SHADER}
         );
         ctx.primitive = getPrimitive<GeometryT>();
         updateStyle(ctx, f);
         return ctx;
     }
 
-    template <typename GeometryT>
-    NoShadingStyle::InstancedRenderContext
-    getInstancedContext(GeometryT &g, NoShadingStyle const &f) {
-        return getContext<NoShadingStyle::InstancedRenderContext, GeometryT>(g, f);
-    }
-
-    template <typename GeometryT>
-    NoShadingStyle::RenderContext
-    getContext(GeometryT &g, NoShadingStyle const &f) {
-        return getContext<NoShadingStyle::RenderContext, GeometryT>(g, f);
-    }
-
     template <typename RenderContextT>
-    void updateStyle(RenderContextT &ctx, NoShadingStyle const &f) {
-        ctx.set(f.args);
+    void updateStyle(RenderContextT &ctx, NoShading const &f) {
+        ctx.params.set(f.args);
     }
 
-    template <typename ViewContextT>
-    void draw(NoShadingStyle::InstancedRenderContext &ctx, ViewContextT const &viewCtx) {
+    template <typename GeometryT, typename ViewContextT>
+    void draw(InstancedRenderContext<GeometryT, NoShading> &ctx, ViewContextT const &viewCtx) {
         drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
+            setNoShadingUniforms(ctx, program);
         });
     }
 
-    template <typename ViewContextT>
-    void draw(NoShadingStyle::RenderContext &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
+    template <typename GeometryT, typename ViewContextT>
+    void draw(RenderContext<GeometryT, NoShading> &ctx, ViewContextT const &viewCtx, mat4f model=mat4f(1.f)) {
         drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
-            ctx.setUniforms(program);
+            setNoShadingUniforms(ctx, program);
             program->setMat4("model", model);
         });
     }
@@ -11764,7 +11890,6 @@ namespace style {
 
 namespace givr {
     namespace style {
-
         template<typename ColorSrc>
         struct T_PhongParameters : public Style<
             ColorSrc,
@@ -11778,8 +11903,31 @@ namespace givr {
             WireFrameWidth,
             GenerateNormals
         > {
-            T_PhongParameters() {
-                // Default values
+        };
+
+        template<typename ColorSrc>
+        struct T_Phong : T_PhongParameters<ColorSrc> {
+            using Parameters = T_PhongParameters<ColorSrc>;
+            template <typename... T_PhongArgs>
+            T_Phong(T_PhongArgs &&... args) {
+                using required_args =
+                    std::tuple<LightPosition, ColorSrc>;
+
+                using namespace style;
+                using namespace utility;
+
+                static_assert(!has_duplicate_types<T_PhongArgs...>,
+                    "The arguments you passed in have duplicate parameters");
+
+                static_assert(
+                    is_subset_of<required_args, std::tuple<T_PhongArgs...>> &&
+                    is_subset_of<std::tuple<T_PhongArgs...>, typename T_Phong<ColorSrc>::Args> &&
+                    sizeof...(args) <= std::tuple_size<typename T_Phong<ColorSrc>::Args>::value,
+                    "You have provided incorrect parameters for phong. "
+                    "LightPosition and (Colour or ColorTexture) are required "
+                    "AmbientFactor, SpecularFactor PhongExponent and PerVertexColor "
+                    "are optional.");
+
                 this->set(PerVertexColour(false));
                 this->set(AmbientFactor(0.05f));
                 this->set(SpecularFactor(0.3f));
@@ -11788,150 +11936,41 @@ namespace givr {
                 this->set(WireFrameColour(0.f, 0.f, 0.f));
                 this->set(WireFrameWidth(1.5f));
                 this->set(GenerateNormals(false));
+                this->set(std::forward<T_PhongArgs>(args)...);
             }
         };
-
 
         std::string phongVertexSource(std::string modelSource, bool usingTexture, bool hasNormals, bool hasColours);
         std::string phongGeometrySource(bool usingTexture, bool hasNormals, bool hasColours);
         std::string phongFragmentSource(bool usingTexture, bool hasColours);
 
         template <typename RenderContextT>
-        void setPhongUniforms(RenderContextT const &ctx, std::unique_ptr<givr::Program> const &p) {
+        void setPhongUniforms(RenderContextT const & ctx, std::unique_ptr<givr::Program> const &p) {
             using namespace givr::style;
-            p->setVec3("colour", ctx.template value<Colour>());
-            p->setVec3("lightPosition", ctx.template value<LightPosition>());
-            p->setFloat("ambientFactor", ctx.template value<AmbientFactor>());
-            p->setFloat("specularFactor", ctx.template value<SpecularFactor>());
-            p->setFloat("phongExponent", ctx.template value<PhongExponent>());
-            p->setBool("perVertexColour", ctx.template value<PerVertexColour>());
-            p->setBool("showWireFrame", ctx.template value<ShowWireFrame>());
-            p->setVec3("wireFrameColour", ctx.template value<WireFrameColour>());
-            p->setFloat("wireFrameWidth", ctx.template value<WireFrameWidth>());
-            p->setBool("generateNormals", ctx.template value<GenerateNormals>());
-        }
-
-        template <typename RenderContextT>
-        void setTexturedPhongUniforms(RenderContextT const & ctx, std::unique_ptr<givr::Program> const &p) {
-            using namespace givr::style;
-            givr::Texture texture = ctx.template value<ColorTexture>();
-            if (GLuint(texture)) {
-                glActiveTexture(GL_TEXTURE1);
-                texture.bind(GL_TEXTURE_2D);
-                p->setInt("colorTexture", 1);
-                glActiveTexture(GL_TEXTURE0);
+            if constexpr (std::is_same<RenderContextT, T_Phong<ColorTexture>>::value) {
+                givr::Texture texture = ctx.template value<ColorTexture>();
+                if (GLuint(texture)) {
+                    glActiveTexture(GL_TEXTURE1);
+                    texture.bind(GL_TEXTURE_2D);
+                    p->setInt("colorTexture", 1);
+                    glActiveTexture(GL_TEXTURE0);
+                }
+            } else {
+                p->setVec3("colour", ctx.params.template value<Colour>());
             }
-            p->setVec3("lightPosition", ctx.template value<LightPosition>());
-            p->setFloat("ambientFactor", ctx.template value<AmbientFactor>());
-            p->setFloat("specularFactor", ctx.template value<SpecularFactor>());
-            p->setFloat("phongExponent", ctx.template value<PhongExponent>());
-            p->setBool("perVertexColour", ctx.template value<PerVertexColour>());
-            p->setBool("showWireFrame", ctx.template value<ShowWireFrame>());
-            p->setVec3("wireFrameColour", ctx.template value<WireFrameColour>());
-            p->setFloat("wireFrameWidth", ctx.template value<WireFrameWidth>());
-            p->setBool("generateNormals", ctx.template value<GenerateNormals>());
-        }
-
-        template<typename ColorSrc>
-        struct T_PhongInstancedRenderContext
-            :
-            public T_PhongParameters<ColorSrc>,
-            public InstancedRenderContext
-        {
-            void setUniforms(std::unique_ptr<Program> const &p) const {
-                if constexpr (std::is_same<ColorSrc, ColorTexture>::value)
-                    setTexturedPhongUniforms(*this, p);
-                else
-                    setPhongUniforms(*this, p);
-            }
-
-            std::string getVertexShaderSource(bool hasNormals, bool hasColours) const {
-                return phongVertexSource(
-                        "layout(location=0) in",
-                        std::is_same<ColorSrc, ColorTexture>::value,
-                        hasNormals,
-                        hasColours
-                    );
-            }
-            std::string getGeometryShaderSource(bool hasNormals, bool hasColours) const {
-                return phongGeometrySource(
-                        std::is_same<ColorSrc, ColorTexture>::value,
-                        hasNormals,
-                        hasColours
-                    );
-            }
-            std::string getFragmentShaderSource(bool hasColours) const {
-                return phongFragmentSource(std::is_same<ColorSrc, ColorTexture>::value, hasColours);
-            }
-        };
-
-        template<typename ColorSrc>
-        struct T_PhongRenderContext
-            :
-            public T_PhongParameters<ColorSrc>,
-            public RenderContext
-        {
-            void setUniforms(std::unique_ptr<Program> const &p) const {
-                if constexpr (std::is_same<ColorSrc, ColorTexture>::value)
-                    setTexturedPhongUniforms(*this, p);
-                else
-                    setPhongUniforms(*this, p);
-
-            }
-
-            std::string getVertexShaderSource(bool hasNormals, bool hasColours) const {
-                return phongVertexSource(
-                        "uniform",
-                        std::is_same<ColorSrc, ColorTexture>::value,
-                        hasNormals,
-                        hasColours
-                    );
-            }
-            std::string getGeometryShaderSource(bool hasNormals, bool hasColours) const {
-                return phongGeometrySource(
-                        std::is_same<ColorSrc, ColorTexture>::value,
-                        hasNormals,
-                        hasColours
-                    );
-            }
-            std::string getFragmentShaderSource(bool hasColours) const {
-                return phongFragmentSource(std::is_same<ColorSrc, ColorTexture>::value, hasColours);
-            }
-        };
-
-        template<typename ColorSrc>
-        struct T_PhongStyle : T_PhongParameters<ColorSrc> {
-            using InstancedRenderContext = T_PhongInstancedRenderContext<ColorSrc>;
-            using RenderContext = T_PhongRenderContext<ColorSrc>;
-        };
-
-        template <typename ColorSrc, typename... T_PhongArgs>
-        T_PhongStyle<ColorSrc> T_Phong(T_PhongArgs &&... args) {
-            using required_args =
-                std::tuple<LightPosition, ColorSrc>;
-
-            using namespace style;
-            using namespace utility;
-
-            static_assert(!has_duplicate_types<T_PhongArgs...>,
-                "The arguments you passed in have duplicate parameters");
-
-            static_assert(
-                is_subset_of<required_args, std::tuple<T_PhongArgs...>> &&
-                is_subset_of<std::tuple<T_PhongArgs...>, typename T_PhongStyle<ColorSrc>::Args> &&
-                sizeof...(args) <= std::tuple_size<typename T_PhongStyle<ColorSrc>::Args>::value,
-                "You have provided incorrect parameters for phong. "
-                "LightPosition and (Colour or ColorTexture) are required "
-                "AmbientFactor, SpecularFactor PhongExponent and PerVertexColor "
-                "are optional.");
-
-            T_PhongStyle<ColorSrc> p;
-            p.set(std::forward<T_PhongArgs>(args)...);
-            return p;
+            p->setVec3("lightPosition", ctx.params.template value<LightPosition>());
+            p->setFloat("ambientFactor", ctx.params.template value<AmbientFactor>());
+            p->setFloat("specularFactor", ctx.params.template value<SpecularFactor>());
+            p->setFloat("phongExponent", ctx.params.template value<PhongExponent>());
+            p->setBool("perVertexColour", ctx.params.template value<PerVertexColour>());
+            p->setBool("showWireFrame", ctx.params.template value<ShowWireFrame>());
+            p->setVec3("wireFrameColour", ctx.params.template value<WireFrameColour>());
+            p->setFloat("wireFrameWidth", ctx.params.template value<WireFrameWidth>());
+            p->setBool("generateNormals", ctx.params.template value<GenerateNormals>());
         }
 
         template <typename GeometryT, typename ColorSrc>
-        BufferData fillBuffers(GeometryT const &g, T_PhongStyle<ColorSrc> const &) {
+        typename GeometryT::Data fillBuffers(GeometryT const &g, T_Phong<ColorSrc> const &) {
             static_assert(
                 givr::isTriangleBased<GeometryT>(),
                 "The PhongStyle requires TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN, "
@@ -11954,105 +11993,86 @@ namespace givr {
                 "not provide them."
                 );
 
-            BufferData data;
-            typename GeometryT::Data d = generateGeometry(g);
-            data.dimensions = d.dimensions;
-            data.verticesType = d.verticesType;
-            data.addVertices(d.vertices);
-
-            if constexpr (hasNormals<GeometryT>::value) {
-                data.normalsType = d.normalsType;
-                data.addNormals(d.normals);
-            }
-
-            if constexpr (hasIndices<GeometryT>::value) {
-                data.indicesType = d.indicesType;
-                data.addIndices(d.indices);
-            }
-            if constexpr (hasColours<GeometryT>::value && !std::is_same<ColorSrc, Colour>::value) {
-                data.coloursType = d.coloursType;
-                data.addColours(d.colours);
-            }
-            if constexpr (hasUvs<GeometryT>::value && std::is_same<ColorSrc, ColorTexture>::value) {
-                data.uvsType = d.uvsType;
-                data.addUvs(d.uvs);
-            }
-
-            return std::move(data);
+            return std::move(generateGeometry(g));
         }
 
-        template <typename RenderContextT, typename GeometryT, typename ColorSrc>
-        RenderContextT getContext(GeometryT &, T_PhongStyle<ColorSrc> const &p) {
-            RenderContextT ctx;
+        template <typename GeometryT, typename StyleT>
+        std::unique_ptr<Program> getPhongShaderProgram(std::string modelSource) {
             constexpr bool _hasNormals = hasNormals<GeometryT>::value;
             constexpr bool _hasColours = hasColours<GeometryT>::value;
-            // TODO: this probably belongs in the constructor
-            ctx.shaderProgram = std::make_unique<Program>(
-                Shader{ ctx.getVertexShaderSource(_hasNormals, _hasColours), GL_VERTEX_SHADER },
-                Shader{ ctx.getGeometryShaderSource(_hasNormals, _hasColours), GL_GEOMETRY_SHADER },
-                Shader{ ctx.getFragmentShaderSource(_hasColours), GL_FRAGMENT_SHADER }
+            constexpr bool _useTex = std::is_same<StyleT, T_Phong<ColorTexture>>::value;
+            return std::make_unique<Program>(
+                Shader{
+                    phongVertexSource(modelSource, _useTex, _hasNormals, _hasColours),
+                    GL_VERTEX_SHADER
+                },
+                Shader{
+                    phongGeometrySource(_useTex, _hasNormals, _hasColours),
+                    GL_GEOMETRY_SHADER
+                },
+                Shader{
+                    phongFragmentSource(_useTex, _hasColours),
+                    GL_FRAGMENT_SHADER
+                }
             );
+        }
+
+        template <typename GeometryT, typename ColorSrc>
+        RenderContext<GeometryT, T_Phong<ColorSrc>>
+        getContext(GeometryT const &, T_Phong<ColorSrc> const &p) {
+            std::cout << "Phong" << std::endl;
+            RenderContext<GeometryT, T_Phong<ColorSrc>> ctx;
+            ctx.shaderProgram = getPhongShaderProgram<GeometryT, T_Phong<ColorSrc>>(ctx.getModelSource());
             ctx.primitive = getPrimitive<GeometryT>();
             updateStyle(ctx, p);
-            return ctx;
+            return std::move(ctx);
         }
 
-        template <typename GeometryT, typename ColorSrc>
-        typename T_PhongStyle<ColorSrc>::InstancedRenderContext
-            getInstancedContext(GeometryT &g, T_PhongStyle<ColorSrc> const &p) {
-            return getContext<typename T_PhongStyle<ColorSrc>::InstancedRenderContext, GeometryT>(g, p);
+        template <typename GeometryT, typename StyleT>
+        InstancedRenderContext<GeometryT, StyleT>
+        getInstancedContext(GeometryT const &, StyleT const &p) {
+            InstancedRenderContext<GeometryT, StyleT> ctx;
+            ctx.shaderProgram = getPhongShaderProgram<GeometryT, StyleT>(ctx.getModelSource());
+            ctx.primitive = getPrimitive<GeometryT>();
+            updateStyle(ctx, p);
+            return std::move(ctx);
         }
 
-        template <typename GeometryT, typename ColorSrc>
-        typename T_PhongStyle<ColorSrc>::RenderContext
-            getContext(GeometryT &g, T_PhongStyle<ColorSrc> const &p) {
-            return getContext<typename T_PhongStyle<ColorSrc>::RenderContext, GeometryT>(g, p);
-        }
 
         template <typename RenderContextT, typename ColorSrc>
-        void updateStyle(RenderContextT &ctx, T_PhongStyle<ColorSrc> const &p) {
-            ctx.set(p.args);
+        void updateStyle(RenderContextT &ctx, T_Phong<ColorSrc> const &p) {
+            ctx.params.set(p.args);
         }
 
         // TODO: come up with a better way to not duplicate OpenGL state setup
-        template <typename ViewContextT, typename ColorSrc>
-        void draw(T_PhongInstancedRenderContext<ColorSrc> &ctx, ViewContextT const &viewCtx) {
+        template <typename GeometryT, typename ViewContextT, typename ColorSrc>
+        void draw(InstancedRenderContext<GeometryT, T_Phong<ColorSrc>> &ctx, ViewContextT const &viewCtx) {
             glEnable(GL_MULTISAMPLE);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             drawInstanced(ctx, viewCtx, [&ctx](std::unique_ptr<Program> const &program) {
-                ctx.setUniforms(program);
+                setPhongUniforms(ctx, program);
             });
         }
 
-        template <typename ViewContextT, typename ColorSrc>
-        void draw(T_PhongRenderContext<ColorSrc>& ctx, ViewContextT const &viewCtx, mat4f const model = mat4f(1.f)) {
+        template <typename GeometryT, typename ViewContextT, typename ColorSrc>
+        void draw(RenderContext<GeometryT, T_Phong<ColorSrc>>& ctx, ViewContextT const &viewCtx, mat4f const model = mat4f(1.f)) {
             glEnable(GL_MULTISAMPLE);
             glEnable(GL_DEPTH_TEST);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             drawArray(ctx, viewCtx, [&ctx, &model](std::unique_ptr<Program> const &program) {
-                ctx.setUniforms(program);
+                setPhongUniforms(ctx, program);
                 program->setMat4("model", model);
             });
         }
 
 
-        using TexturedPhongStyle = T_PhongStyle<ColorTexture>;
-        using TexturedPhongRenderContext = T_PhongRenderContext<ColorTexture>;
-        using TexturedPhongInstancedRenderContext = T_PhongInstancedRenderContext<ColorTexture>;
-        template<typename... Args>
-        TexturedPhongStyle TexturedPhong(Args &&... args) {
-            return T_Phong<ColorTexture>(std::forward<Args>(args)...);
-        }
-        using PhongStyle = T_PhongStyle<Colour>;
-        using PhongRenderContext = T_PhongRenderContext<Colour>;
-        using PhongInstancedRenderContext = T_PhongInstancedRenderContext<Colour>;
-        template<typename... Args>
-        PhongStyle Phong(Args &&... args) {
-            return T_Phong<Colour>(std::forward<Args>(args)...);
-        }
+        using TexturedPhongStyle = T_Phong<ColorTexture>;
+        using PhongStyle = T_Phong<Colour>;
+        using TexturedPhong = T_Phong<ColorTexture>;
+        using Phong = T_Phong<Colour>;
 
     }// end namespace style
 }// end namespace givr
@@ -12070,10 +12090,18 @@ namespace givr {
 namespace givr {
 namespace geometry {
 
-    struct TriangleSoupGeometry {
+    struct TriangleSoup {
         private:
             std::vector<TriangleGeometry> m_triangles;
         public:
+            template <typename... Args>
+            TriangleSoup(Args &&... args) {
+                std::vector<TriangleGeometry> tris{args...};
+                for (auto &t : tris) {
+                    m_triangles.push_back(t);
+                }
+            }
+
             std::vector<TriangleGeometry> &triangles() { return m_triangles; }
             std::vector<TriangleGeometry> const &triangles() const { return m_triangles; }
 
@@ -12084,7 +12112,7 @@ namespace geometry {
                 m_triangles.push_back(Triangle(Point1(p1), Point2(p2), Point3(p3)));
             }
 
-            struct Data : public VertextArrayData<PrimitiveType::TRIANGLES> {
+            struct Data : public VertexArrayData<PrimitiveType::TRIANGLES> {
                 std::uint16_t dimensions = 3;
 
                 BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
@@ -12094,18 +12122,11 @@ namespace geometry {
                 std::vector<float> normals;
             };
     };
+    // Backwards Compatibility
+    using TriangleSoupGeometry = TriangleSoup;
 
-    template <typename... Args>
-    TriangleSoupGeometry TriangleSoup(Args &&... args) {
-        TriangleSoupGeometry geometry;
-        std::vector<TriangleGeometry> tris{args...};
-        for (auto &t : tris) {
-            geometry.triangles().push_back(t);
-        }
-        return geometry;
-    }
 
-    TriangleSoupGeometry::Data generateGeometry(TriangleSoupGeometry const &t);
+    TriangleSoup::Data generateGeometry(TriangleSoup const &t);
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
@@ -12121,34 +12142,35 @@ namespace geometry {
 namespace givr {
 namespace geometry {
 
-    struct MultiLineGeometry {
+    struct MultiLine {
         private:
-            std::vector<LineGeometry> m_segments;
+            std::vector<Line> m_segments;
 
         public:
-            std::vector<LineGeometry> &segments() { return m_segments; }
-            std::vector<LineGeometry> const &segments() const { return m_segments; }
-            std::vector<LineGeometry> &operator*() { return m_segments; }
+            template <typename... Args>
+            MultiLine(
+                Args &&... args
+            ) : m_segments{std::forward<Args>(args)...}
+            { }
 
-            void push_back(LineGeometry l);
+            std::vector<Line> &segments() { return m_segments; }
+            std::vector<Line> const &segments() const { return m_segments; }
+            std::vector<Line> &operator*() { return m_segments; }
 
-            struct Data : public VertextArrayData<PrimitiveType::LINES> {
+            void push_back(Line l);
+
+            struct Data : public VertexArrayData<PrimitiveType::LINES> {
                 std::uint16_t dimensions = 3;
 
                 BufferUsageType verticesType = BufferUsageType::STATIC_DRAW;
                 std::vector<float> vertices;
             };
     };
+    // Backwards Compatibility
+    using MultiLineGeometry = MultiLine;
 
-    template <typename... Args>
-    MultiLineGeometry MultiLine(Args &&... args) {
-        // TODO: we could do better compile time checking here.
-        MultiLineGeometry geometry;
-        geometry.segments() = {args...};
-        return geometry;
-    }
 
-    MultiLineGeometry::Data generateGeometry(MultiLineGeometry const &l);
+    MultiLine::Data generateGeometry(MultiLine const &l);
 }// end namespace geometry
 }// end namespace givr
 //------------------------------------------------------------------------------
