@@ -1,7 +1,7 @@
 Documentation
 -------------
 
-https://lakin.ca/givr/
+https://givr.readthedocs.io/en/latest/?badge=latest
 
 Compilation
 -----------
